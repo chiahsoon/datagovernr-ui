@@ -1,0 +1,19 @@
+{
+  "displayName": "DataGovernR",
+  "description": "Governance of Research Data",
+  "scope": "dataset",
+  "types": [
+    "explore"
+  ],
+  "toolUrl": "http://localhost:3000",
+  "toolParameters": {
+    "queryParameters": [
+      {
+        "datasetId": "{datasetId}"
+      },
+      {
+        "apiToken": "{apiToken}"
+      }
+    ]
+  }
+}

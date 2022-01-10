@@ -9,7 +9,16 @@
   "toolParameters": {
     "queryParameters": [
       {
+        "siteUrl": "{siteUrl}"
+      },
+      {
         "datasetId": "{datasetId}"
+      },
+      {
+        "datasetPid": "{datasetPid}"
+      },
+      {
+        "datasetVersion": "{datasetVersion}"
       },
       {
         "apiToken": "{apiToken}"

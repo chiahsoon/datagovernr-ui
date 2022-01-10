@@ -1,23 +1,18 @@
 import React from 'react';
+import {BrowserRouter, Route, Routes} from 'react-router-dom';
 import './App.css';
+import MainLayout from './pages/MainLayout';
+import {DatasetsPage} from './pages/DatasetsPage';
+import {EntryErrorPage} from './pages/EntryErrorPage';
 
 function App() {
     return (
-        <div className="App">
-            <header className="App-header">
-                <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-                </p>
-                <a
-                    className="App-link"
-                    href="https://reactjs.org"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-          Learn React
-                </a>
-            </header>
-        </div>
+        <BrowserRouter>
+            <Routes>
+                <Route path='/' element={<MainLayout contents={<DatasetsPage/>}/>}/>
+                <Route path='/entryError' element={<EntryErrorPage/>} />
+            </Routes>
+        </BrowserRouter>
     );
 }
 

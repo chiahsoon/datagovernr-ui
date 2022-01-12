@@ -10,7 +10,6 @@ export const getDatasetInfo = async (serverUrl: string, datasetId: string,
 };
 
 export const getDatasetTitle = (datasetInfo: any): string => {
-    console.log(datasetInfo);
     const metadataBlocks: MetadataBlockField[] = datasetInfo.metadataBlocks.citation.fields;
     const titleBlock = metadataBlocks.filter((field) => field.typeName === 'title')[0];
     return titleBlock.value.toString();

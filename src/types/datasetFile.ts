@@ -6,6 +6,7 @@ export interface DatasetFile {
     version: number
     datasetVersionId: number
     dataFile: DataFile
+    key: number // Set as dataFile.id to avoid table item warning
 }
 
 export interface DataFile {

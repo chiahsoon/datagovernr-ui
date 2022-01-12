@@ -2,13 +2,13 @@ import React, {useEffect, useState} from 'react';
 import {Col, Row, message} from 'antd';
 import Title from 'antd/es/typography/Title';
 import {getDatasetTitle, getDatasetInfo} from '../api/dataverse';
-import {EmptyFiles} from '../types/datasetFile';
+import {DatasetFile, EmptyFiles} from '../types/datasetFile';
 import {FilesTable} from '../components/FilesTable';
 
 export const DatasetsPage = () => {
     useEffect(() => {
         if (!sourceParams.siteUrl || !sourceParams.datasetId || !sourceParams.datasetPid ||
-            !sourceParams.datasetVersion || sourceParams.apiToken) {
+            !sourceParams.datasetVersion || !sourceParams.apiToken) {
             window.location.pathname = '/entryError'; // not sure why navigate('/entryError') doesn't work
             return;
         }
@@ -16,6 +16,7 @@ export const DatasetsPage = () => {
         getDatasetInfo(sourceParams.siteUrl, sourceParams.datasetId, sourceParams.datasetVersion, sourceParams.apiToken)
             .then((datasetInfo) => {
                 setDatasetTile(getDatasetTitle(datasetInfo));
+                datasetInfo.files.forEach((f: DatasetFile) => f.key = f.dataFile.id);
                 setFiles(datasetInfo.files);
             })
             .catch((err) => {

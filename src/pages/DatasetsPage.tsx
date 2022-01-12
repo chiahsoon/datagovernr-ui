@@ -1,77 +1,84 @@
 import React, {useEffect, useState} from 'react';
-import {Col, Row, message} from 'antd';
+import {Col, Row, Button, Tag} from 'antd';
 import Title from 'antd/es/typography/Title';
-import {getDatasetTitle, getDatasetInfo} from '../api/dataverse';
+import {getTitleFromDatasetMetadata, getDatasetInfo, getDatasetFiles} from '../api/dataverse';
 import {DatasetFile, EmptyFiles} from '../types/datasetFile';
 import {FilesTable} from '../components/FilesTable';
+import {PlusOutlined} from '@ant-design/icons';
+import {UploadFileModal} from '../components/UploadFileModal';
+import {Skeleton} from 'antd/es';
+import {DataverseSourceParams, getSourceParams, isSourceParamsComplete} from '../types/dataverseSourceParams';
+import {displayError} from '../utils/error';
 
 export const DatasetsPage = () => {
     useEffect(() => {
-        if (!sourceParams.siteUrl || !sourceParams.datasetId || !sourceParams.datasetPid ||
-            !sourceParams.datasetVersion || !sourceParams.apiToken) {
+        if (isSourceParamsComplete(sourceParams)) {
             window.location.pathname = '/entryError'; // not sure why navigate('/entryError') doesn't work
             return;
         }
 
-        getDatasetInfo(sourceParams.siteUrl, sourceParams.datasetId, sourceParams.datasetVersion, sourceParams.apiToken)
+        getDatasetInfo(sourceParams)
             .then((datasetInfo) => {
-                setDatasetTile(getDatasetTitle(datasetInfo));
+                setDatasetTitle(getTitleFromDatasetMetadata(datasetInfo));
                 datasetInfo.files.forEach((f: DatasetFile) => f.key = f.dataFile.id);
                 setFiles(datasetInfo.files);
             })
-            .catch((err) => {
-                message.error('Failed to fetch valid dataset information.').then();
-                console.log('failed to fetch valid dataset information: ', err);
-            });
+            .catch((err) => displayError('Failed to fetch valid dataset information!', err));
     }, []);
 
-    const sourceParams = getSourceParams();
-    const [datasetTitle, setDatasetTile] = useState('Title');
+    const sourceParams: DataverseSourceParams = getSourceParams();
+    // TODO: Consider adding everything into a Dataset object instead
+    const [datasetTitle, setDatasetTitle] = useState('');
     const [files, setFiles] = useState(EmptyFiles);
+    const [isUploadFilesModalVisible, setIsUploadFilesModalVisible] = useState(false);
+
+    const handleUploadFilesModalOk = () => {
+        getDatasetFiles(sourceParams)
+            .then((files: DatasetFile[]) => {
+                files.forEach((f: DatasetFile) => f.key = f.dataFile.id);
+                setFiles(files);
+            })
+            .catch((err) => displayError('Failed to refresh dataset\'s files information.', err));
+    };
 
     return (
         <>
-            <Row>
+            <Row gutter={[16, 16]}>
                 <Col span={24}>
-                    <Title>{datasetTitle}</Title>
+                    {datasetTitle === '' ?
+                        <Skeleton paragraph={{rows: 0}}/> :
+                        <div>
+                            <Title style={{display: 'inline', marginRight: '16px'}}>{datasetTitle}</Title>
+                            <Tag color="green">
+                                {
+                                    sourceParams.datasetVersion === ':draft' ?
+                                        'Draft' :
+                                        `v${sourceParams.datasetVersion}`
+                                }
+                            </Tag>
+                        </div>
+                    }
                 </Col>
-            </Row>
-            <Row>
+                <Col span={8} offset={16}>
+                    <Button
+                        type='primary'
+                        icon={<PlusOutlined />}
+                        style={{float: 'right'}}
+                        onClick={() => setIsUploadFilesModalVisible(true)}>
+                        Upload Files
+                    </Button>
+                </Col>
                 <Col span={24}>
                     <FilesTable files={files} />
                 </Col>
             </Row>
+            <UploadFileModal
+                sourceParams={sourceParams}
+                visible={isUploadFilesModalVisible}
+                setVisible={setIsUploadFilesModalVisible}
+                callbackFn={handleUploadFilesModalOk}
+            />
         </>
     );
 };
 
-interface DataverseSourceParams {
-    siteUrl: string,
-    apiToken: string,
-    datasetId: string,
-    datasetVersion: string,
-    datasetPid: string,
-}
-
-const getSourceParams = (): DataverseSourceParams => {
-    const queryString = window.location.search;
-    const urlParams = new URLSearchParams(queryString);
-    const params: DataverseSourceParams = {
-        siteUrl: urlParams.get('siteUrl') || '',
-        apiToken: urlParams.get('apiToken') || '',
-        datasetId: urlParams.get('datasetId') || '',
-        datasetVersion: urlParams.get('datasetVersion') || '',
-        datasetPid: urlParams.get('datasetPid') || '',
-    };
-
-    // For localhost, dataverse returns e.g. http://<OS host name>:8080 instead of http://localhost:8080
-    // Using http as indicator to change to localhost since it's unsafe
-    if (params.siteUrl.startsWith('http')) {
-        const url = new URL(params.siteUrl);
-        url.host = 'localhost';
-        const urlString = url.toString();
-        params.siteUrl = urlString.endsWith('/') ? urlString.substring(0, urlString.length - 1) : urlString;
-    }
-
-    return params;
-};

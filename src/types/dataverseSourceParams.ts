@@ -1,15 +1,11 @@
 export interface DataverseSourceParams {
     siteUrl: string,
     apiToken: string,
+    // Not in use, just for storage
     datasetId: string,
     datasetVersion: string,
     datasetPid: string,
 }
-
-export const isSourceParamsComplete = (sourceParams: DataverseSourceParams): boolean => {
-    return !sourceParams.siteUrl || !sourceParams.datasetId || !sourceParams.datasetPid ||
-        !sourceParams.datasetVersion || !sourceParams.apiToken;
-};
 
 export const getSourceParams = (): DataverseSourceParams => {
     const queryString = window.location.search;
@@ -32,4 +28,9 @@ export const getSourceParams = (): DataverseSourceParams => {
     }
 
     return params;
+};
+
+export const isSourceParamsIncomplete = (sourceParams: DataverseSourceParams): boolean => {
+    return !sourceParams.siteUrl || !sourceParams.datasetId || !sourceParams.datasetPid ||
+        !sourceParams.datasetVersion || !sourceParams.apiToken;
 };

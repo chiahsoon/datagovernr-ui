@@ -1,65 +1,68 @@
 import React, {useEffect, useState} from 'react';
-import {Col, Row, Button, Tag} from 'antd';
+import {Col, Row, Button, Tag, Tooltip} from 'antd';
 import Title from 'antd/es/typography/Title';
-import {getTitleFromDatasetMetadata, getDatasetInfo, getDatasetFiles} from '../api/dataverse';
-import {DatasetFile, EmptyFiles} from '../types/datasetFile';
+import {getLatestDatasetInfo} from '../api/dataverse';
 import {FilesTable} from '../components/FilesTable';
 import {PlusOutlined} from '@ant-design/icons';
 import {UploadFileModal} from '../components/UploadFileModal';
 import {Skeleton} from 'antd/es';
-import {DataverseSourceParams, getSourceParams, isSourceParamsComplete} from '../types/dataverseSourceParams';
+import {
+    DataverseSourceParams,
+    getSourceParams,
+    isSourceParamsIncomplete,
+} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
+import {
+    DRAFT_VERSION_STATE,
+    EmptyDataset,
+    getDatasetTitle,
+    getDatasetVersion,
+} from '../types/dataset';
+
+const colProps = {
+    span: 16,
+    offset: 4,
+};
 
 export const DatasetsPage = () => {
     useEffect(() => {
-        if (isSourceParamsComplete(sourceParams)) {
+        if (isSourceParamsIncomplete(sourceParams)) {
             window.location.pathname = '/entryError'; // not sure why navigate('/entryError') doesn't work
             return;
         }
 
-        getDatasetInfo(sourceParams)
-            .then((datasetInfo) => {
-                setDatasetTitle(getTitleFromDatasetMetadata(datasetInfo));
-                datasetInfo.files.forEach((f: DatasetFile) => f.key = f.dataFile.id);
-                setFiles(datasetInfo.files);
-            })
-            .catch((err) => displayError('Failed to fetch valid dataset information!', err));
+        fetchAndUpdateDataset();
     }, []);
 
     const sourceParams: DataverseSourceParams = getSourceParams();
-    // TODO: Consider adding everything into a Dataset object instead
-    const [datasetTitle, setDatasetTitle] = useState('');
-    const [files, setFiles] = useState(EmptyFiles);
+    const [dataset, setDataset] = useState(EmptyDataset);
     const [isUploadFilesModalVisible, setIsUploadFilesModalVisible] = useState(false);
 
-    const handleUploadFilesModalOk = () => {
-        getDatasetFiles(sourceParams)
-            .then((files: DatasetFile[]) => {
-                files.forEach((f: DatasetFile) => f.key = f.dataFile.id);
-                setFiles(files);
-            })
-            .catch((err) => displayError('Failed to refresh dataset\'s files information.', err));
+    const fetchAndUpdateDataset = () => {
+        getLatestDatasetInfo(sourceParams)
+            .then((latestDatasetInfo) => setDataset(latestDatasetInfo))
+            .catch((err) => displayError('Failed to fetch valid dataset information!', err));
     };
 
     return (
         <>
             <Row gutter={[16, 16]}>
-                <Col span={24}>
-                    {datasetTitle === '' ?
+                <Col {...colProps}>
+                    {getDatasetTitle(dataset) === '' ?
                         <Skeleton paragraph={{rows: 0}}/> :
                         <div>
-                            <Title style={{display: 'inline', marginRight: '16px'}}>{datasetTitle}</Title>
-                            <Tag color="green">
-                                {
-                                    sourceParams.datasetVersion === ':draft' ?
-                                        'Draft' :
-                                        `v${sourceParams.datasetVersion}`
-                                }
-                            </Tag>
+                            <Title style={{display: 'inline', marginRight: '16px'}}>{getDatasetTitle(dataset)}</Title>
+                            {
+                                dataset.versionState === DRAFT_VERSION_STATE ?
+                                    <Tooltip title='There are unpublished changes in this Draft version.'>
+                                        <Tag color="orange">Version: Draft</Tag>
+                                    </Tooltip> :
+                                    <Tag color='green'>Version: `v${getDatasetVersion(dataset)}`</Tag>
+                            }
                         </div>
                     }
                 </Col>
-                <Col span={8} offset={16}>
+                <Col {...colProps}>
                     <Button
                         type='primary'
                         icon={<PlusOutlined />}
@@ -68,15 +71,15 @@ export const DatasetsPage = () => {
                         Upload Files
                     </Button>
                 </Col>
-                <Col span={24}>
-                    <FilesTable files={files} />
+                <Col {...colProps}>
+                    <FilesTable files={dataset.files} />
                 </Col>
             </Row>
             <UploadFileModal
                 sourceParams={sourceParams}
                 visible={isUploadFilesModalVisible}
                 setVisible={setIsUploadFilesModalVisible}
-                callbackFn={handleUploadFilesModalOk}
+                callbackFn={() => fetchAndUpdateDataset()}
             />
         </>
     );

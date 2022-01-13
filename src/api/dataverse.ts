@@ -1,31 +1,17 @@
-import {MetadataBlockField} from 'js-dataverse/dist/@types/metadataBlockField';
 import {DatasetFile} from '../types/datasetFile';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
+import {Dataset} from '../types/dataset';
 
-export const getDatasetInfo = async (sourceParams: DataverseSourceParams) => {
-    const {siteUrl, datasetId, datasetVersion} = sourceParams;
-    const url = `${siteUrl}/api/datasets/${datasetId}/versions/${datasetVersion}`;
+export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams): Promise<Dataset> => {
+    const {siteUrl, datasetId} = sourceParams;
+    const url = `${siteUrl}/api/datasets/${datasetId}/versions/:latest`;
     const resp = await fetch(url, {
-        headers: {'X-Dataverse-key': sourceParams.apiToken}, // Not really necessary
+        headers: {'X-Dataverse-key': sourceParams.apiToken}, // Compulsory to retrieve draft
     });
     const jsonData = await resp.json();
-    return jsonData.data;
-};
-
-export const getTitleFromDatasetMetadata = (datasetInfo: any): string => {
-    const metadataBlocks: MetadataBlockField[] = datasetInfo.metadataBlocks.citation.fields;
-    const titleBlock = metadataBlocks.filter((field) => field.typeName === 'title')[0];
-    return titleBlock.value.toString();
-};
-
-export const getDatasetFiles = async (sourceParams: DataverseSourceParams): Promise<DatasetFile[]> => {
-    const {siteUrl, datasetId, datasetVersion} = sourceParams;
-    const url = `${siteUrl}/api/datasets/${datasetId}/versions/${datasetVersion}/files`;
-    const resp = await fetch(url, {
-        headers: {'X-Dataverse-key': sourceParams.apiToken}, // Not really necessary
-    });
-    const jsonData = await resp.json();
-    return jsonData.data;
+    const dataset: Dataset = jsonData.data;
+    dataset.files.forEach((f: DatasetFile) => f.key = f.dataFile.id);
+    return dataset;
 };
 
 export const addFilesToDataset = async (sourceParams: DataverseSourceParams, files: File[]): Promise<any[]> => {

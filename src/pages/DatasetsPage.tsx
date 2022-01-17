@@ -57,7 +57,7 @@ export const DatasetsPage = () => {
                                     <Tooltip title='There are unpublished changes in this Draft version.'>
                                         <Tag color="orange">Version: Draft</Tag>
                                     </Tooltip> :
-                                    <Tag color='green'>Version: `v${getDatasetVersion(dataset)}`</Tag>
+                                    <Tag color='green'>Version: {getDatasetVersion(dataset).toFixed(2)}</Tag>
                             }
                         </div>
                     }

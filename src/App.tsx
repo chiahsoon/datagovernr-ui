@@ -1,16 +1,15 @@
 import React from 'react';
 import {BrowserRouter, Route, Routes} from 'react-router-dom';
 import './App.css';
-import MainLayout from './pages/MainLayout';
 import {DatasetsPage} from './pages/DatasetsPage';
-import {EntryErrorPage} from './pages/EntryErrorPage';
+import {FilePage} from './pages/FilePage';
 
 function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path='/' element={<MainLayout contents={<DatasetsPage/>}/>}/>
-                <Route path='/entryError' element={<EntryErrorPage/>} />
+                <Route path='/' element={<DatasetsPage/>}/>
+                <Route path='/file' element={<FilePage/>}/>
             </Routes>
         </BrowserRouter>
     );

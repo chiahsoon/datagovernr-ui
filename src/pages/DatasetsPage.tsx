@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Col, Row, Button, Tag, Tooltip} from 'antd';
 import Title from 'antd/es/typography/Title';
-import {getLatestDatasetInfo} from '../api/dataverse';
+import {getLatestDatasetInfo} from '../web/dataverse';
 import {FilesTable} from '../components/FilesTable';
 import {PlusOutlined} from '@ant-design/icons';
 import {UploadFileModal} from '../components/UploadFileModal';
@@ -18,6 +18,8 @@ import {
     getDatasetTitle,
     getDatasetVersion,
 } from '../types/dataset';
+import {ErrorPage} from './ErrorPage';
+import MainLayout from './MainLayout';
 
 const colProps = {
     span: 16,
@@ -26,11 +28,7 @@ const colProps = {
 
 export const DatasetsPage = () => {
     useEffect(() => {
-        if (isSourceParamsIncomplete(sourceParams)) {
-            window.location.pathname = '/entryError'; // not sure why navigate('/entryError') doesn't work
-            return;
-        }
-
+        if (isSourceParamsIncomplete(sourceParams)) return;
         fetchAndUpdateDataset();
     }, []);
 
@@ -44,8 +42,14 @@ export const DatasetsPage = () => {
             .catch((err) => displayError('Failed to fetch valid dataset information!', err));
     };
 
+    if (isSourceParamsIncomplete(sourceParams)) {
+        return <ErrorPage
+            title='Invalid entry method'
+            message='Please access DataGovernR via your Dataverse Dashboard.' />;
+    }
+
     return (
-        <>
+        <MainLayout name={'DataGovernR (Dataset)'}>
             <Row gutter={[16, 16]}>
                 <Col {...colProps}>
                     {getDatasetTitle(dataset) === '' ?
@@ -81,7 +85,7 @@ export const DatasetsPage = () => {
                 setVisible={setIsUploadFilesModalVisible}
                 callbackFn={() => fetchAndUpdateDataset()}
             />
-        </>
+        </MainLayout>
     );
 };
 

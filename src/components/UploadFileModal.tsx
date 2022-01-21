@@ -3,7 +3,7 @@ import {Upload, Col, Modal, Row, Switch, message, Tooltip} from 'antd';
 import {InboxOutlined, InfoCircleOutlined} from '@ant-design/icons';
 import {UploadFile} from 'antd/es/upload/interface';
 import {RcFile} from 'antd/lib/upload';
-import {addFilesToDataset} from '../api/dataverse';
+import {addFilesToDataset} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
 

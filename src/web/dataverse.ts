@@ -14,7 +14,7 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
     return dataset;
 };
 
-export const addFilesToDataset = async (sourceParams: DataverseSourceParams, files: File[]): Promise<any[]> => {
+export const addFilesToDataset = async (sourceParams: DataverseSourceParams, files: File[]): Promise<File[]> => {
     // TODO: Re-confirm if Dataverse API only supports adding a single file
     // Seems to only allow adding a single file since additional jsonData is only for a single file
     const url = `${sourceParams.siteUrl}/api/datasets/${sourceParams.datasetId}/add`;
@@ -37,5 +37,13 @@ export const addFilesToDataset = async (sourceParams: DataverseSourceParams, fil
         });
         promises.push(uploadPromise);
     });
-    return Promise.all(promises);
+    return Promise.all(promises)
+        .then((filesResponses) => Promise.all(filesResponses.map((resp) => resp.json())))
+        .then((jsonDataArr) => jsonDataArr.map((jsonData) => jsonData.data.files));
+};
+
+export const getDownloadFileLink = (fileId: string, siteUrl: string, apiToken?: string): string => {
+    let url = `${siteUrl}/api/access/datafile/${fileId}`;
+    if (apiToken != null) url += `?key=${apiToken}`;
+    return url;
 };

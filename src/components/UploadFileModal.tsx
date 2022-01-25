@@ -6,6 +6,7 @@ import {RcFile} from 'antd/lib/upload';
 import {addFilesToDataset} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
+import forge from 'node-forge';
 
 const {Dragger} = Upload;
 
@@ -21,6 +22,8 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     const [fileList, setFileList] = useState<UploadFile[]>([]);
     const [shouldEncryptFiles, setShouldEncryptFiles] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
+    const [encryptedData, setEncryptedData] = useState('');
+    const [decryptedData, setDecryptedData] = useState('');
 
     const onModalOk = () => {
         // TODO: Encrypt data if needed
@@ -54,6 +57,32 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
 
     const onFileAdd = (file: RcFile) => {
         setFileList([file, ...fileList]);
+        file.arrayBuffer().then((arrBuf) => {
+            const keySizeBytes = 32;
+
+            // Use master password to generate encryption key
+            const numIterations = 1000;
+            const password = 'password';
+            const salt = forge.random.getBytesSync(keySizeBytes * 8);
+            const key = forge.pkcs5.pbkdf2(password, salt, numIterations, keySizeBytes);
+
+            const iv = forge.random.getBytesSync(keySizeBytes);
+            const cipher = forge.cipher.createCipher('AES-GCM', key);
+            cipher.start({iv: iv});
+            cipher.update(forge.util.createBuffer(arrBuf));
+            cipher.finish();
+            const encrypted = cipher.output;
+            const encoded = forge.util.encode64(encrypted.getBytes());
+            setEncryptedData(encoded);
+
+            // Assume we store the base64 encoded form, iv, tag
+            const encryptedBsb = forge.util.createBuffer(forge.util.decode64(encoded));
+            const decipher = forge.cipher.createDecipher('AES-GCM', key);
+            decipher.start({iv: iv, tag: cipher.mode.tag});
+            decipher.update(encryptedBsb);
+            decipher.finish(); // check result for true/false
+            setDecryptedData(decipher.output.toString());
+        });
         return true;
     };
 
@@ -87,6 +116,8 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
                 <Col span={8}>
                     <Switch checked={shouldEncryptFiles} onChange={setShouldEncryptFiles} style={{float: 'right'}}/>
                 </Col>
+                <Col span={24}>Encrypted Data Here (Base64 encoded): {encryptedData}</Col>
+                <Col span={24}>Decrypted Data Here: {decryptedData}</Col>
             </Row>
         </Modal>
     );

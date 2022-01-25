@@ -1,60 +1,57 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Col, Descriptions, List, Row} from 'antd';
 import {ErrorPage} from './ErrorPage';
-import {DGFile, EmptyVerificationDetails} from '../types/verificationDetails';
+import {EmptyVerificationDetails} from '../types/verificationDetails';
 import {getFileVerificationDetails} from '../web/api';
 import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
 import {DownloadOutlined} from '@ant-design/icons';
 import {getDownloadFileLink} from '../web/dataverse';
+import {
+    areSourceDatasetParamsIncomplete,
+    DataverseSourceParams,
+} from '../types/dataverseSourceParams';
+import {FileVerificationListItem} from '../components/FileVerificationListItem';
+import {pageColumnProps} from '../styles/common';
+import {useLocation} from 'react-router-dom';
+interface FilePageProps {
+    fileId: string
+    sourceParams: DataverseSourceParams
+}
 
-const colProps = {
-    span: 16,
-    offset: 4,
-};
 
-const FileListItem = (props: { file: DGFile }) => {
-    // TODO: Consider adding names to data
-    const {id, encryptedHash} = props.file;
-    return (
-        <List.Item>
-            <List.Item.Meta
-                title={`File ID: ${id}`} // <a href="https://ant.design">{item.id}</a>
-                description={`File Hash: ${encryptedHash}`}
-            />
-        </List.Item>
-    );
-};
-
+// TODO: To navigate to this page, it is necessary to pass in FilePageProps for location.state
+// At least until this is better designed
 export const FilePage = () => {
     useEffect(() => {
-        if (fileId == null) return;
+        if (areSourceDatasetParamsIncomplete(sourceParams) || fileId === '') return;
         getFileVerificationDetails(fileId)
             .then((details) => setVerificationDetails(details))
             .catch((err) => displayError('Failed to retrieve verification details', err));
     }, []);
 
+    const {fileId, sourceParams} = useLocation().state as FilePageProps;
     const [verificationDetails, setVerificationDetails] = useState(EmptyVerificationDetails);
 
-    const fileId = new URLSearchParams(window.location.search).get('fileId');
-    if (fileId == null) {
+    if (areSourceDatasetParamsIncomplete(sourceParams) || fileId === '') {
         return <ErrorPage
-            title='File Not Specified'
-            message='Please navigate to this page from a valid file'/>;
+            title='Invalid parameters'
+            message='Please navigate to this page from a valid file.' />;
     }
 
     return (
         <MainLayout name={'DataGovernR (File)'}>
             <Row gutter={[16, 16]}>
-                <Col {...colProps}>
+                <Col {...pageColumnProps}>
                     <Title level={2} style={{display: 'inline', marginRight: '16px'}}>File Details</Title>
-                    {/* TODO: Proper integration with Dataverse */}
-                    <Button icon={<DownloadOutlined />} href={getDownloadFileLink(fileId, '', '')}>
+                    <Button
+                        icon={<DownloadOutlined />}
+                        href={getDownloadFileLink(fileId, sourceParams.siteUrl, sourceParams.apiToken)}>
                         Download
                     </Button>
                 </Col>
-                <Col {...colProps}>
+                <Col {...pageColumnProps}>
                     <Descriptions bordered size='small'>
                         <Descriptions.Item label="File ID" span={3}>{fileId}</Descriptions.Item>
                         <Descriptions.Item label="Verification Link" span={3}>
@@ -65,13 +62,13 @@ export const FilePage = () => {
                         </Descriptions.Item>
                     </Descriptions>
                 </Col>
-                <Col {...colProps}>
+                <Col {...pageColumnProps}>
                     <List
                         size="large"
                         header={<Title level={5}>File Hashes Involved in Verification</Title>}
                         bordered
                         dataSource={verificationDetails.files}
-                        renderItem={(item) => <FileListItem file={item}/>}
+                        renderItem={(item) => <FileVerificationListItem file={item}/>}
                     />
                 </Col>
             </Row>

@@ -9,7 +9,7 @@ import {Skeleton} from 'antd/es';
 import {
     DataverseSourceParams,
     getSourceParams,
-    isSourceParamsIncomplete,
+    areSourceDatasetParamsIncomplete,
 } from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
 import {
@@ -20,15 +20,12 @@ import {
 } from '../types/dataset';
 import {ErrorPage} from './ErrorPage';
 import MainLayout from './MainLayout';
+import {pageColumnProps} from '../styles/common';
 
-const colProps = {
-    span: 16,
-    offset: 4,
-};
 
-export const DatasetsPage = () => {
+export const DatasetPage = () => {
     useEffect(() => {
-        if (isSourceParamsIncomplete(sourceParams)) return;
+        if (areSourceDatasetParamsIncomplete(sourceParams)) return;
         fetchAndUpdateDataset();
     }, []);
 
@@ -42,16 +39,16 @@ export const DatasetsPage = () => {
             .catch((err) => displayError('Failed to fetch valid dataset information!', err));
     };
 
-    if (isSourceParamsIncomplete(sourceParams)) {
+    if (areSourceDatasetParamsIncomplete(sourceParams)) {
         return <ErrorPage
             title='Invalid entry method'
-            message='Please access DataGovernR via your Dataverse Dashboard.' />;
+            message='Please access DataGovernR via a dataset in your Dataverse Dashboard.' />;
     }
 
     return (
         <MainLayout name={'DataGovernR (Dataset)'}>
             <Row gutter={[16, 16]}>
-                <Col {...colProps}>
+                <Col {...pageColumnProps}>
                     {getDatasetTitle(dataset) === '' ?
                         <Skeleton paragraph={{rows: 0}}/> :
                         <div>
@@ -66,7 +63,7 @@ export const DatasetsPage = () => {
                         </div>
                     }
                 </Col>
-                <Col {...colProps}>
+                <Col {...pageColumnProps}>
                     <Button
                         type='primary'
                         icon={<PlusOutlined />}
@@ -75,8 +72,8 @@ export const DatasetsPage = () => {
                         Upload Files
                     </Button>
                 </Col>
-                <Col {...colProps}>
-                    <FilesTable files={dataset.files} />
+                <Col {...pageColumnProps}>
+                    <FilesTable files={dataset.files} sourceParams={sourceParams}/>
                 </Col>
             </Row>
             <UploadFileModal

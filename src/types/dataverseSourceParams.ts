@@ -1,9 +1,8 @@
 export interface DataverseSourceParams {
     siteUrl: string,
     apiToken: string,
-    // Not in use, just for storage
+    datasetVersion: string, // Not in use, just for storage
     datasetId: string,
-    datasetVersion: string,
     datasetPid: string,
 }
 
@@ -13,8 +12,8 @@ export const getSourceParams = (): DataverseSourceParams => {
     const params: DataverseSourceParams = {
         siteUrl: urlParams.get('siteUrl') || '',
         apiToken: urlParams.get('apiToken') || '',
-        datasetId: urlParams.get('datasetId') || '',
         datasetVersion: urlParams.get('datasetVersion') || '',
+        datasetId: urlParams.get('datasetId') || '',
         datasetPid: urlParams.get('datasetPid') || '',
     };
 
@@ -30,7 +29,11 @@ export const getSourceParams = (): DataverseSourceParams => {
     return params;
 };
 
-export const isSourceParamsIncomplete = (sourceParams: DataverseSourceParams): boolean => {
-    return !sourceParams.siteUrl || !sourceParams.datasetId || !sourceParams.datasetPid ||
-        !sourceParams.datasetVersion || !sourceParams.apiToken;
+export const areSourceCoreParamsIncomplete = (sourceParams: DataverseSourceParams): boolean => {
+    return !sourceParams.siteUrl || !sourceParams.apiToken;
+};
+
+export const areSourceDatasetParamsIncomplete = (sourceParams: DataverseSourceParams): boolean => {
+    return areSourceCoreParamsIncomplete(sourceParams) || !sourceParams.datasetVersion ||
+        !sourceParams.datasetId || !sourceParams.datasetPid;
 };

@@ -11,14 +11,12 @@ interface ErrorPageProps {
 export const ErrorPage = (props: ErrorPageProps) => {
     const {title, message} = props;
     return (
-        <>
-            <Row align={'middle'} style={{textAlign: 'center', minHeight: '80vh'}}>
-                <Col span={8} offset={8}>
-                    <Card title={<Title level={3}><ExclamationCircleOutlined />{title}</Title>}>
-                        <Title level={5}>{message}</Title>
-                    </Card>
-                </Col>
-            </Row>
-        </>
+        <Row align={'middle'} style={{textAlign: 'center', minHeight: '80vh'}}>
+            <Col span={8} offset={8}>
+                <Card title={<Title level={3}><ExclamationCircleOutlined />{title}</Title>}>
+                    <Title level={5}>{message}</Title>
+                </Card>
+            </Col>
+        </Row>
     );
 };

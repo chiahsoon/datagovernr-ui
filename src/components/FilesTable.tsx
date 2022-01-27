@@ -25,7 +25,7 @@ export const FilesTable = (props: FilesTableProps) => {
         {
             title: 'Access Link',
             dataIndex: ['dataFile', 'id'],
-            render: ((fileId) => {
+            render: ((fileId: number) => {
                 return (
                     <Button type="link">
                         <Link to='/file' state={{fileId, sourceParams}}><ExportOutlined /></Link>

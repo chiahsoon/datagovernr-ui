@@ -14,21 +14,14 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
     return dataset;
 };
 
-export const addFilesToDataset = async (sourceParams: DataverseSourceParams, files: File[]): Promise<File[]> => {
+export const addFilesToDataset = async (sourceParams: DataverseSourceParams, files: File[]): Promise<DatasetFile[]> => {
     // TODO: Re-confirm if Dataverse API only supports adding a single file
     // Seems to only allow adding a single file since additional jsonData is only for a single file
     const url = `${sourceParams.siteUrl}/api/datasets/${sourceParams.datasetId}/add`;
     const promises: Promise<any>[] = [];
     files.forEach((file) => {
         const formData = new FormData();
-        // TODO: Confirm how to handle file metadata
-        // const additionalData = {
-        //     description: "My description.",
-        //     directoryLabel: `${file.name}`,
-        //     categories: ["Data"],
-        //     restrict: "false"
-        // }
-        // formData.append('jsonData', JSON.stringify(additionalData));
+        // TODO: Add formData['jsonData'] if necessary (description, directoryLabel, categories, restrict)
         formData.append('file', file); // OR 'file[]'
         const uploadPromise = fetch(url, {
             method: 'POST',
@@ -37,12 +30,17 @@ export const addFilesToDataset = async (sourceParams: DataverseSourceParams, fil
         });
         promises.push(uploadPromise);
     });
+
     return Promise.all(promises)
         .then((filesResponses) => Promise.all(filesResponses.map((resp) => resp.json())))
-        .then((jsonDataArr) => jsonDataArr.map((jsonData) => jsonData.data.files));
+        .then((jsonDataArr) => {
+            const filesArr: DatasetFile[][] = jsonDataArr.map((jsonData) => jsonData.data.files);
+            const empty: DatasetFile[] = [];
+            return empty.concat(...filesArr);
+        });
 };
 
-export const getDownloadFileLink = (fileId: string, siteUrl: string, apiToken?: string): string => {
+export const getDownloadFileLink = (fileId: number, siteUrl: string, apiToken?: string): string => {
     let url = `${siteUrl}/api/access/datafile/${fileId}`;
     if (apiToken != null) url += `?key=${apiToken}`;
     return url;

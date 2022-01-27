@@ -7,7 +7,6 @@ import {PlusOutlined} from '@ant-design/icons';
 import {UploadFileModal} from '../components/UploadFileModal';
 import {Skeleton} from 'antd/es';
 import {
-    DataverseSourceParams,
     getSourceParams,
     areSourceDatasetParamsIncomplete,
 } from '../types/dataverseSourceParams';
@@ -29,7 +28,7 @@ export const DatasetPage = () => {
         fetchAndUpdateDataset();
     }, []);
 
-    const sourceParams: DataverseSourceParams = getSourceParams();
+    const sourceParams = getSourceParams();
     const [dataset, setDataset] = useState(EmptyDataset);
     const [isUploadFilesModalVisible, setIsUploadFilesModalVisible] = useState(false);
 
@@ -46,7 +45,7 @@ export const DatasetPage = () => {
     }
 
     return (
-        <MainLayout name={'DataGovernR (Dataset)'}>
+        <MainLayout name={'DataGovernR'}>
             <Row gutter={[16, 16]}>
                 <Col {...pageColumnProps}>
                     {getDatasetTitle(dataset) === '' ?

@@ -6,6 +6,11 @@ import {RcFile} from 'antd/lib/upload';
 import {addFilesToDataset} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
+import forge from 'node-forge';
+import {ab2str} from '../utils/fileHelper';
+import {DGFile} from '../types/verificationDetails';
+import {addFiles} from '../web/api';
+import {DatasetFile} from '../types/datasetFile';
 
 const {Dragger} = Upload;
 
@@ -23,12 +28,19 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     const [isUploading, setIsUploading] = useState(false);
 
     const onModalOk = () => {
-        // TODO: Encrypt data if needed
         const files = fileList
             .filter((file: UploadFile): file is RcFile => file !== undefined); // Type Guard
 
+        // TODO: Encrypt data first when necessary
+        const constructFileHashes = Promise
+            .all(files.map((f) => f.arrayBuffer()))
+            .then((fileBufs) => fileBufs.map((fileBuf) => ab2str(fileBuf)))
+            .then((fileStrs) => fileStrs.map((fileStr) => forge.md.sha512.create().update(fileStr).digest().toHex()));
+
         setIsUploading(true);
-        addFilesToDataset(sourceParams, files)
+        Promise.all([addFilesToDataset(sourceParams, files), constructFileHashes])
+            .then(([datasetFiles, hashes]: [DatasetFile[], string[]]) => buildDGFile(datasetFiles, hashes))
+            .then((dgFiles: DGFile[]) => addFiles(dgFiles))
             .then(() => message.success('Successfully uploaded all files.'))
             .catch((err) => displayError('Failed to upload some files!', err))
             .finally(() => setIsUploading(false))
@@ -101,4 +113,14 @@ const UploadFileModalTitle = () => {
             </Tooltip>
         </span>
     );
+};
+
+const buildDGFile = (datasetFiles: DatasetFile[], hashes: string[]): DGFile[] => {
+    // Assumes dataFiles and hashes are index-aligned (zippable)
+    return datasetFiles.map((datasetFile, idx) => {
+        return {
+            id: datasetFile.dataFile.id,
+            encryptedHash: hashes[idx],
+        };
+    });
 };

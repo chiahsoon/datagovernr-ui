@@ -1,3 +1,6 @@
+import {useLocation} from 'react-router-dom';
+import {GlobalLocationState} from './globalLocationState';
+
 export interface DataverseSourceParams {
     siteUrl: string,
     apiToken: string,
@@ -7,6 +10,13 @@ export interface DataverseSourceParams {
 }
 
 export const getSourceParams = (): DataverseSourceParams => {
+    const fromLocation = useLocation().state as GlobalLocationState;
+    if (fromLocation != null &&
+        fromLocation.sourceParams != null &&
+        !areSourceDatasetParamsIncomplete(fromLocation.sourceParams)) {
+        return fromLocation.sourceParams;
+    }
+
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     const params: DataverseSourceParams = {

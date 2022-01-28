@@ -66,7 +66,6 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
             const password = 'password';
             const salt = forge.random.getBytesSync(keySizeBytes * 8);
             const key = forge.pkcs5.pbkdf2(password, salt, numIterations, keySizeBytes);
-
             const cipher = FileEncryptionService.createEncryptionInstance(FileEncryptionScheme.AES256GCM, key);
             const encrypted = cipher.encryptFile(arrBuf);
 

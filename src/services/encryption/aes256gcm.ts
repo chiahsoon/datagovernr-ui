@@ -20,7 +20,7 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             if (!this.isValidKey(key)) {
                 throw new RangeError('Invalid key');
             }
-            // this.key = forge.util.hexToBytes(key);//Buffer.from(key, 'hex');
+            this.key = key; // forge.util.hexToBytes(key); // Buffer.from(key, 'hex');
         } else {
             // Generate a random key
             // 256-bit key = 32 bytes
@@ -48,9 +48,11 @@ export class AES256GCMInstance implements FileEncryptionInstance {
 
     decryptFile(ciphertextBuffer: ArrayBuffer): string {
         // Extract IV from file
-        const iv = forge.util.createBuffer(ciphertextBuffer.slice(0, 12));
+        const decoder = new TextDecoder();
+        const cipherText = decoder.decode(ciphertextBuffer);
+        const iv = forge.util.createBuffer(cipherText.slice(0, 12));
         // Extract auth tag from file
-        const tag = forge.util.createBuffer(ciphertextBuffer.slice(-16));
+        const tag = forge.util.createBuffer(cipherText.slice(-16));
         // Instantiate the cipher
         const cipher = forge.cipher.createDecipher('AES-GCM', this.key);
         cipher.start({
@@ -59,7 +61,8 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             tagLength: 128,
             tag: tag});
         // Decrypt the ciphertext
-        cipher.update(forge.util.createBuffer(ciphertextBuffer));
+        const contents = forge.util.createBuffer(cipherText.slice(12, -16));
+        cipher.update(contents);
         if (!cipher.finish()) {
             throw new Error('Decryption Error');
         }

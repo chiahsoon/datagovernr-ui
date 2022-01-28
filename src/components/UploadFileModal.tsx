@@ -59,38 +59,26 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     const onFileAdd = (file: RcFile) => {
         setFileList([file, ...fileList]);
         file.arrayBuffer().then((arrBuf) => {
-            const keySizeBytes = 32;
+            const keySizeBytes = FileEncryptionService.getKeyLength(FileEncryptionScheme.AES256GCM);
 
             // Use master password to generate encryption key
+            // Extract password derivation into new module
             const numIterations = 1000;
             const password = 'password';
-            const salt = forge.random.getBytesSync(keySizeBytes * 8);
+            // 20-byte salt to match output length of PBKDF2 hash function (default SHA-1)
+            const salt = forge.random.getBytesSync(20);
             const key = forge.pkcs5.pbkdf2(password, salt, numIterations, keySizeBytes);
+
+            // Carry out encryption
             const cipher = FileEncryptionService.createEncryptionInstance(FileEncryptionScheme.AES256GCM, key);
             const encrypted = cipher.encryptFile(arrBuf);
-
-            /*
-            const iv = forge.random.getBytesSync(keySizeBytes);
-            const cipher = forge.cipher.createCipher('AES-GCM', key);
-            cipher.start({iv: iv});
-            cipher.update(forge.util.createBuffer(arrBuf));
-            cipher.finish();
-            const encrypted = cipher.output;
-            const encoded = forge.util.encode64(encrypted.getBytes());*/
             const encoded = forge.util.encode64(encrypted);
             setEncryptedData(encoded);
 
-            // Assume we store the base64 encoded form, iv, tag
-            // const encryptedBsb = forge.util.createBuffer(forge.util.decode64(encoded));
+            // Carry out decryption
             const decipher = FileEncryptionService.createEncryptionInstance(
                 FileEncryptionScheme.AES256GCM,
                 cipher.getKey());
-            /*
-            const decipher = forge.cipher.createDecipher('AES-GCM', key);
-            decipher.start({iv: iv, tag: cipher.mode.tag});
-            decipher.update(encryptedBsb);
-            decipher.finish(); // check result for true/false
-            setDecryptedData(decipher.output.toString());*/
             const encoder = new TextEncoder();
             setDecryptedData(decipher.decryptFile(encoder.encode(encrypted).buffer));
         });

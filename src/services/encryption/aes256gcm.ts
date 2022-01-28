@@ -1,16 +1,17 @@
-// import { crypto } from 'crypto';
-// const forge = require('node-forge');
 import forge, {} from 'node-forge';
 import {FileEncryptionInstance} from '../encryption';
 
-/*  Ciphertext Format
- *  nonce | ciphertext | tag
- *  12    | *          | 16 bytes
- */
-
 export class AES256GCMInstance implements FileEncryptionInstance {
+    /*  Ciphertext Format
+     *  nonce | ciphertext | tag
+     *  12    | *          | 16 bytes
+     */
+    static readonly IV_LENGTH = 12;
+    static readonly TAG_LENGTH = 16;
+    // AES-256 uses a 256-bit = 32-byte key
+    static readonly KEY_LENGTH = 32;
     // Maintain a single key, which can be used to encrypt (using different nonces) or decrypt multiple files.
-    private key!: string;
+    private readonly key!: string;
     // Set of used nonces stored as base64 strings
     private noncesAlreadyUsed: Set<string> = new Set<string>();
 
@@ -20,11 +21,10 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             if (!this.isValidKey(key)) {
                 throw new RangeError('Invalid key');
             }
-            this.key = key; // forge.util.hexToBytes(key); // Buffer.from(key, 'hex');
+            this.key = key;
         } else {
             // Generate a random key
-            // 256-bit key = 32 bytes
-            this.key = forge.random.getBytesSync(32);
+            this.key = forge.random.getBytesSync(AES256GCMInstance.KEY_LENGTH);
         }
     }
 
@@ -36,7 +36,7 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         cipher.start({
             iv: iv,
             additionalData: '',
-            tagLength: 128});
+            tagLength: AES256GCMInstance.TAG_LENGTH * 8});
         // Encrypt the plaintext
         cipher.update(forge.util.createBuffer(plaintextBuffer));
         cipher.finish();
@@ -50,18 +50,20 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         // Extract IV from file
         const decoder = new TextDecoder();
         const cipherText = decoder.decode(ciphertextBuffer);
-        const iv = forge.util.createBuffer(cipherText.slice(0, 12));
+        const iv = forge.util.createBuffer(cipherText.slice(0, AES256GCMInstance.IV_LENGTH));
         // Extract auth tag from file
-        const tag = forge.util.createBuffer(cipherText.slice(-16));
+        const tag = forge.util.createBuffer(cipherText.slice(-AES256GCMInstance.TAG_LENGTH));
         // Instantiate the cipher
         const cipher = forge.cipher.createDecipher('AES-GCM', this.key);
         cipher.start({
             iv: iv,
             additionalData: '',
-            tagLength: 128,
+            tagLength: AES256GCMInstance.TAG_LENGTH * 8,
             tag: tag});
         // Decrypt the ciphertext
-        const contents = forge.util.createBuffer(cipherText.slice(12, -16));
+        const contents = forge.util.createBuffer(
+            cipherText.slice(AES256GCMInstance.IV_LENGTH,
+                -AES256GCMInstance.TAG_LENGTH));
         cipher.update(contents);
         if (!cipher.finish()) {
             throw new Error('Decryption Error');
@@ -70,32 +72,22 @@ export class AES256GCMInstance implements FileEncryptionInstance {
     }
 
     isValidKey(key: string):boolean {
-        /* / Validate hex format
-        if (!/[0-9A-Fa-f]{6}/g.test(key)) {
-            return false;
-        }*/
-
-        // Validate key length
-        // 256-bit key = 32 bytes = 32 chars
-        return key.length == 32;
+        return key.length == AES256GCMInstance.KEY_LENGTH;
     }
 
     getKey(): string {
         return this.key;
-        // return this.key.toString('hex');
     }
 
     private generateNewNonce(): string {
         // 96-bit nonce = 12 bytes
-        let iv = forge.random.getBytesSync(12);
-        // Ensure that this nonce has not already been used with this key
+        let iv = forge.random.getBytesSync(AES256GCMInstance.TAG_LENGTH);
+        // Generate new nonce if this nonce has already been used with this key
         while (this.noncesAlreadyUsed.has(iv)) {
-            iv = forge.random.getBytesSync(12);
+            iv = forge.random.getBytesSync(AES256GCMInstance.TAG_LENGTH);
         }
         // Save nonce to prevent reuse
         this.noncesAlreadyUsed.add(iv);
         return iv;
     }
 }
-
-// module.exports = {AES256GCMInstance};

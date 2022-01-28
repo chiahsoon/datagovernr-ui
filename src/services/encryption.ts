@@ -20,11 +20,14 @@ export class FileEncryptionService {
             throw new RangeError('Invalid encryption scheme');
         }
     }
-}
-/*
-export class util {
-    public stringToArrayBuffer(input: string): ArrayBuffer {
-        new ArrayBuffer();
-        return new ArrayBuffer();
+
+    public static getKeyLength(scheme: FileEncryptionScheme): number {
+        switch (scheme) {
+            case FileEncryptionScheme.AES256GCM:
+                return AES256GCMInstance.KEY_LENGTH;
+
+            default:
+                throw new RangeError('Invalid encryption scheme');
+        }
     }
-}*/
+}

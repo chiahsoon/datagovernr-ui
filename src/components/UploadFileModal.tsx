@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {Upload, Col, Modal, Row, Switch, message, Tooltip} from 'antd';
+import {Col, message, Modal, Row, Switch, Tooltip, Upload} from 'antd';
 import {InboxOutlined, InfoCircleOutlined} from '@ant-design/icons';
 import {UploadFile} from 'antd/es/upload/interface';
 import {RcFile} from 'antd/lib/upload';
@@ -11,6 +11,7 @@ import {ab2str} from '../utils/fileHelper';
 import {DGFile} from '../types/verificationDetails';
 import {addFiles} from '../web/api';
 import {DatasetFile} from '../types/datasetFile';
+import {FileEncryptionScheme, FileEncryptionService} from '../services/encryption';
 
 const {Dragger} = Upload;
 
@@ -26,6 +27,8 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     const [fileList, setFileList] = useState<UploadFile[]>([]);
     const [shouldEncryptFiles, setShouldEncryptFiles] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
+    const [encryptedData, setEncryptedData] = useState('');
+    const [decryptedData, setDecryptedData] = useState('');
 
     const onModalOk = () => {
         const files = fileList
@@ -66,6 +69,30 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
 
     const onFileAdd = (file: RcFile) => {
         setFileList([file, ...fileList]);
+        file.arrayBuffer().then((arrBuf) => {
+            const keySizeBytes = FileEncryptionService.getKeyLength(FileEncryptionScheme.AES256GCM);
+
+            // Use master password to generate encryption key
+            // Extract password derivation into new module
+            const numIterations = 1000;
+            const password = 'password';
+            // 20-byte salt to match output length of PBKDF2 hash function (default SHA-1)
+            const salt = forge.random.getBytesSync(20);
+            const key = forge.pkcs5.pbkdf2(password, salt, numIterations, keySizeBytes);
+
+            // Carry out encryption
+            const cipher = FileEncryptionService.createEncryptionInstance(FileEncryptionScheme.AES256GCM, key);
+            const encrypted = cipher.encryptFile(arrBuf);
+            const encoded = forge.util.encode64(encrypted);
+            setEncryptedData(encoded);
+
+            // Carry out decryption
+            const decipher = FileEncryptionService.createEncryptionInstance(
+                FileEncryptionScheme.AES256GCM,
+                cipher.getKey());
+            const encoder = new TextEncoder();
+            setDecryptedData(decipher.decryptFile(encoder.encode(encrypted).buffer));
+        });
         return true;
     };
 
@@ -99,6 +126,8 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
                 <Col span={8}>
                     <Switch checked={shouldEncryptFiles} onChange={setShouldEncryptFiles} style={{float: 'right'}}/>
                 </Col>
+                <Col span={24}>Encrypted Data Here (Base64 encoded): {encryptedData}</Col>
+                <Col span={24}>Decrypted Data Here: {decryptedData}</Col>
             </Row>
         </Modal>
     );

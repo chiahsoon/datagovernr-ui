@@ -16,6 +16,8 @@ plugins:
 rules: {
   "indent": ["error", 4],
   "max-len": ["error", { "code": 120, "tabWidth": 4 }],
+  "no-unused-vars": "off",
+  "@typescript-eslint/no-unused-vars": ["error"],
   "no-use-before-define": "off",
   "@typescript-eslint/no-use-before-define": "off",
   "require-jsdoc": "off",

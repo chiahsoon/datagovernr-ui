@@ -81,10 +81,10 @@ export class AES256GCMInstance implements FileEncryptionInstance {
 
     private generateNewNonce(): string {
         // 96-bit nonce = 12 bytes
-        let iv = forge.random.getBytesSync(AES256GCMInstance.TAG_LENGTH);
+        let iv = forge.random.getBytesSync(AES256GCMInstance.IV_LENGTH);
         // Generate new nonce if this nonce has already been used with this key
         while (this.noncesAlreadyUsed.has(iv)) {
-            iv = forge.random.getBytesSync(AES256GCMInstance.TAG_LENGTH);
+            iv = forge.random.getBytesSync(AES256GCMInstance.IV_LENGTH);
         }
         // Save nonce to prevent reuse
         this.noncesAlreadyUsed.add(iv);

@@ -18,7 +18,9 @@ export interface Verifier {
 
 export interface DGFile {
     id: number
+    plaintextHash: string
     encryptedHash: string
+    salt: string
 }
 
 export const isNotVerified = (details: VerificationDetails) => {

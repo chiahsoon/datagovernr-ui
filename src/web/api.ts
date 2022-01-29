@@ -11,7 +11,7 @@ export const getFileVerificationDetails = async (fileId: number): Promise<Verifi
     return data;
 };
 
-export const addFiles = async (dgFiles: DGFile[]): Promise<void> => {
+export const saveFilesToDG = async (dgFiles: DGFile[]): Promise<void> => {
     const url = `${apiUrl}/file`;
     await fetch(url, {
         method: 'POST',

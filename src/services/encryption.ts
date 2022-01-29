@@ -23,11 +23,11 @@ export class FileEncryptionService {
 
     public static getKeyLength(scheme: FileEncryptionScheme): number {
         switch (scheme) {
-            case FileEncryptionScheme.AES256GCM:
-                return AES256GCMInstance.KEY_LENGTH;
+        case FileEncryptionScheme.AES256GCM:
+            return AES256GCMInstance.KEY_LENGTH;
 
-            default:
-                throw new RangeError('Invalid encryption scheme');
+        default:
+            throw new RangeError('Invalid encryption scheme');
         }
     }
 }

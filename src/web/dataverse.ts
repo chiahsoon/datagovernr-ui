@@ -40,8 +40,10 @@ export const addFilesToDataset = async (sourceParams: DataverseSourceParams, fil
         });
 };
 
-export const getDownloadFileLink = (fileId: number, siteUrl: string, apiToken?: string): string => {
-    let url = `${siteUrl}/api/access/datafile/${fileId}`;
-    if (apiToken != null) url += `?key=${apiToken}`;
-    return url;
+export const downloadFile = async (sourceParams: DataverseSourceParams, fileId: number): Promise<ArrayBuffer> => {
+    let url = `${sourceParams.siteUrl}/api/access/datafile/${fileId}`;
+    if (sourceParams.apiToken != null) url += `?key=${sourceParams.apiToken}`;
+    const resp = await fetch(url);
+    const data = await resp.blob();
+    return await data.arrayBuffer();
 };

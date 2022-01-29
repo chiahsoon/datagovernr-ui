@@ -8,10 +8,10 @@ import {displayError} from '../utils/error';
 import forge from 'node-forge';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
-import {FileEncryptionScheme, FileEncryptionService} from '../services/encryption';
 import {getUploadedFilesData} from '../utils/fileHelper';
 import {SimpleError} from './SimpleError';
 import {fieldsErrorRedBorder, fieldsGreyBorder} from '../styles/common';
+import {encryptWithPassword} from '../services/keygen';
 
 const {Dragger} = Upload;
 
@@ -58,7 +58,7 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     };
 
     const handleFileEvent = (e: any): File[] => {
-        // Handles both upload and removal
+        // Handles both add and removal
         if (Array.isArray(e)) return e;
         return e && e.fileList;
     };
@@ -174,30 +174,4 @@ const saveFiles = async (files: File[], password: string, sourceParams: Datavers
     });
 
     await saveFilesToDG(dgFiles);
-};
-
-// TODO: Refactor cryptography operations into another module
-const encryptWithPassword = (plaintext: ArrayBuffer, password: string): [string, string] => {
-    // 20-byte salt to match output length of PBKDF2 hash function (default SHA-1)
-    const salt = forge.random.getBytesSync(20);
-    const key = generateKey(password, salt);
-    const cipher = FileEncryptionService.createEncryptionInstance(FileEncryptionScheme.AES256GCM, key);
-    const cipherText = cipher.encryptFile(plaintext);
-    return [cipherText, salt];
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const decryptWithPassword = (encrypted: ArrayBuffer, password: string, salt: string): string => {
-    const key = generateKey(password, salt);
-    const decipher = FileEncryptionService.createEncryptionInstance(
-        FileEncryptionScheme.AES256GCM,
-        key);
-    return decipher.decryptFile(encrypted);
-};
-
-const generateKey = (password: string, salt: string): string => {
-    // Extract password derivation into new module
-    const keySizeBytes = FileEncryptionService.getKeyLength(FileEncryptionScheme.AES256GCM);
-    const numIterations = 1000;
-    return forge.pkcs5.pbkdf2(password, salt, numIterations, keySizeBytes);
 };

@@ -7,7 +7,6 @@ import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
 import {DownloadOutlined, QuestionCircleOutlined} from '@ant-design/icons';
-import {getDownloadFileLink} from '../web/dataverse';
 import {
     areSourceDatasetParamsIncomplete, getSourceParams,
 } from '../types/dataverseSourceParams';
@@ -15,6 +14,7 @@ import {FileVerificationListItem} from '../components/FileVerificationListItem';
 import {pageColumnProps} from '../styles/common';
 import {useLocation} from 'react-router-dom';
 import {GlobalLocationState} from '../types/globalLocationState';
+import {DownloadFileModal} from '../components/DownloadFileModal';
 
 const {Text, Link} = Typography;
 
@@ -26,15 +26,22 @@ export const FilePage = () => {
             .catch((err) => displayError('Failed to retrieve verification details', err));
     }, []);
 
-    const fileId = (useLocation().state as GlobalLocationState).fileId;
+    const {fileId, fileName} = useLocation().state as GlobalLocationState;
     const sourceParams = getSourceParams();
     const [verificationDetails, setVerificationDetails] = useState(EmptyVerificationDetails);
+    const [isDownloadFileModalVisible, setIsDownloadFileModalVisible] = useState(false);
 
     if (areSourceDatasetParamsIncomplete(sourceParams) || fileId == null) {
         return <ErrorPage
             title='Invalid parameters'
             message='Please navigate to this page from a valid file.' />;
     }
+
+    const getSalt = (): string => {
+        const file = verificationDetails.files.find((f) => f.id === fileId);
+        if (file != null) return file.salt;
+        return '';
+    };
 
     return (
         <MainLayout name={'DataGovernR'}>
@@ -43,7 +50,7 @@ export const FilePage = () => {
                     <Title level={2} style={{display: 'inline', marginRight: '16px'}}>File Details</Title>
                     <Button
                         icon={<DownloadOutlined />}
-                        href={getDownloadFileLink(fileId, sourceParams.siteUrl, sourceParams.apiToken)}>
+                        onClick={() => setIsDownloadFileModalVisible(true)}>
                         Download
                     </Button>
                 </Col>
@@ -85,6 +92,13 @@ export const FilePage = () => {
                     />
                 </Col>
             </Row>
+            <DownloadFileModal
+                sourceParams={sourceParams}
+                fileId={fileId}
+                fileName={fileName || ''}
+                salt={getSalt()}
+                visible={isDownloadFileModalVisible}
+                setVisible={setIsDownloadFileModalVisible}/>
         </MainLayout>
     );
 };

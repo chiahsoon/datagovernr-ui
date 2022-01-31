@@ -56,7 +56,7 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
             <Form
                 form={form}
                 layout="vertical"
-                name="upload_files_form">
+                name="download_files_form">
                 <Row gutter={[16, 16]}>
                     <Col span={24}>
                         <Form.Item

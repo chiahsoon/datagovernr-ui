@@ -146,7 +146,8 @@ const saveFiles = async (files: File[], password: string, sourceParams: Datavers
     for (const file of files) {
         const fileBuf = await file.arrayBuffer();
         const [encryptedStr, salt] = encryptWithPassword(fileBuf, password);
-        const encryptedBlob = new Blob([encryptedStr]);
+        const encryptedBuf = new TextEncoder().encode(encryptedStr);
+        const encryptedBlob = new Blob([encryptedBuf]);
         const encryptedFile = new File([encryptedBlob], file.name, {
             type: file.type,
         });
@@ -161,7 +162,7 @@ const saveFiles = async (files: File[], password: string, sourceParams: Datavers
     const datasetFiles = await addFilesToDataset(sourceParams, encryptedFiles);
 
     // Add to DG
-    const hashFn = (value: string) => forge.md.sha512.create().update(value).digest().getBytes();
+    const hashFn = (value: string) => forge.md.sha512.create().update(value).digest().toHex();
     const encryptedFileHashes = encryptedStrs.map((encryptedStr) => hashFn(encryptedStr));
     const plaintextHashes = plaintextStrs.map((plaintextStr) => hashFn(plaintextStr));
     const dgFiles: DGFile[] = datasetFiles.map((datasetFile, idx) => {

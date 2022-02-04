@@ -5,7 +5,7 @@ import {downloadFile} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
 import {decryptWithPassword} from '../services/keygen';
-import saveAs from 'file-saver';
+import {byteStringToBytes as binaryToByteArray, downloadViaATag} from '../utils/fileHelper';
 
 interface DownloadFileModalProps {
     sourceParams: DataverseSourceParams
@@ -71,7 +71,6 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
                         </Form.Item>
                     </Col>
                 </Row>
-
             </Form>
         </Modal>
     );
@@ -83,14 +82,9 @@ const decryptAndDownload = async (
     fileName: string,
     salt: string,
     password: string): Promise<void> => {
-    const fileBuf = await downloadFile(sourceParams, fileId);
-    const decryptedData = decryptWithPassword(fileBuf, password, salt);
-    const encoded = new TextEncoder().encode(decryptedData);
-
-    // TODO: Consider alternative for large files in the future
-    // E.g. https://github.com/jimmywarting/StreamSaver.js
-    const blob = new Blob([encoded], {
-        type: 'application/octet-stream;charset=utf-8;', // utf-8 as per Text(En/De)coder
-    });
-    saveAs(blob, fileName);
+    const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
+    const plaintextBinary = decryptWithPassword(ciphertextBinaryBuf, password, salt);
+    const bytes = binaryToByteArray(plaintextBinary);
+    const blob = new Blob([bytes]);
+    downloadViaATag(fileName, blob);
 };

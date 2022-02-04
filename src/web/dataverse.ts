@@ -18,31 +18,25 @@ export const addFilesToDataset = async (sourceParams: DataverseSourceParams, fil
     // TODO: Re-confirm if Dataverse API only supports adding a single file
     // Seems to only allow adding a single file since additional jsonData is only for a single file
     const url = `${sourceParams.siteUrl}/api/datasets/${sourceParams.datasetId}/add`;
-    const promises: Promise<any>[] = [];
-    files.forEach((file) => {
+    let filesArr: DatasetFile[] = [];
+    for (let i = 0; i < files.length; i++) {
         const formData = new FormData();
         // TODO: Add formData['jsonData'] if necessary (description, directoryLabel, categories, restrict)
-        formData.append('file', file); // OR 'file[]'
-        const uploadPromise = fetch(url, {
+        formData.append('file', files[i]); // OR 'file[]'
+        const respData = await fetch(url, {
             method: 'POST',
             body: formData,
             headers: {'X-Dataverse-key': sourceParams.apiToken},
         });
-        promises.push(uploadPromise);
-    });
-
-    return Promise.all(promises)
-        .then((filesResponses) => Promise.all(filesResponses.map((resp) => resp.json())))
-        .then((jsonDataArr) => {
-            const filesArr: DatasetFile[][] = jsonDataArr.map((jsonData) => jsonData.data.files);
-            const empty: DatasetFile[] = [];
-            return empty.concat(...filesArr);
-        });
+        const jsonData = await respData.json();
+        filesArr = filesArr.concat(jsonData.data.files);
+    }
+    return filesArr;
 };
 
 export const downloadFile = async (sourceParams: DataverseSourceParams, fileId: number): Promise<ArrayBuffer> => {
-    let url = `${sourceParams.siteUrl}/api/access/datafile/${fileId}`;
-    if (sourceParams.apiToken != null) url += `?key=${sourceParams.apiToken}`;
+    let url = `${sourceParams.siteUrl}/api/access/datafile/${fileId}?format=original`;
+    if (sourceParams.apiToken != null) url += `&key=${sourceParams.apiToken}`;
     const resp = await fetch(url);
     const data = await resp.blob();
     return await data.arrayBuffer();

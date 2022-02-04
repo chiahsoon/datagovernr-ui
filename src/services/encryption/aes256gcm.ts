@@ -28,43 +28,56 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         }
     }
 
-    encryptFile(plaintextBuffer: ArrayBuffer): string {
+    encryptFile(dataBinaryBuf: ArrayBuffer): string {
         // Generate a new unique nonce
-        const iv = this.generateNewNonce();
+        const ivBinary = this.generateNewNonce();
         // Instantiate the new cipher
         const cipher = forge.cipher.createCipher('AES-GCM', this.key);
         cipher.start({
-            iv: iv,
+            iv: ivBinary,
             additionalData: '',
-            tagLength: AES256GCMInstance.TAG_LENGTH * 8});
+            tagLength: AES256GCMInstance.TAG_LENGTH * 8,
+        });
         // Encrypt the plaintext
-        cipher.update(forge.util.createBuffer(plaintextBuffer));
+        cipher.update(forge.util.createBuffer(dataBinaryBuf));
         cipher.finish();
-        const ciphertextBuffer = cipher.output;
-        const authTag = cipher.mode.tag;
-        // Append the auth tag
-        return iv + ciphertextBuffer.getBytes() + authTag.getBytes();
+        const cipherTextBsb = cipher.output;
+        const tagBsb = cipher.mode.tag;
+        // Convert to hex and concat
+        const ivHex = forge.util.bytesToHex(ivBinary);
+        const cipherTextHex = cipherTextBsb.toHex();
+        const tagHex = tagBsb.toHex();
+        return ivHex + cipherTextHex + tagHex;
     }
 
-    decryptFile(ciphertextBuffer: ArrayBuffer): string {
+    decryptFile(dataBinaryBuf: ArrayBuffer): string {
+        const dataHex = new TextDecoder().decode(dataBinaryBuf);
         // Extract IV from file
-        const decoder = new TextDecoder();
-        const cipherText = decoder.decode(ciphertextBuffer);
-        const iv = forge.util.createBuffer(cipherText.slice(0, AES256GCMInstance.IV_LENGTH));
+        const ivHex = dataHex.slice(0, AES256GCMInstance.IV_LENGTH * 2);
+        const cipherTextHex = dataHex.slice(
+            AES256GCMInstance.IV_LENGTH * 2,
+            -AES256GCMInstance.TAG_LENGTH * 2,
+        );
         // Extract auth tag from file
-        const tag = forge.util.createBuffer(cipherText.slice(-AES256GCMInstance.TAG_LENGTH));
+        const tagHex = dataHex.slice(-AES256GCMInstance.TAG_LENGTH * 2);
+
+        const ivBinary = forge.util.hexToBytes(ivHex);
+        const cipherTextBinary = forge.util.hexToBytes(cipherTextHex);
+        const tagBinary = forge.util.hexToBytes(tagHex);
+
+        const ivBsb = forge.util.createBuffer(ivBinary);
+        const cipherTextBsb = forge.util.createBuffer(cipherTextBinary);
+        const tagBsb = forge.util.createBuffer(tagBinary);
+
         // Instantiate the cipher
         const cipher = forge.cipher.createDecipher('AES-GCM', this.key);
         cipher.start({
-            iv: iv,
+            iv: ivBsb,
             additionalData: '',
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
-            tag: tag});
-        // Decrypt the ciphertext
-        const contents = forge.util.createBuffer(
-            cipherText.slice(AES256GCMInstance.IV_LENGTH,
-                -AES256GCMInstance.TAG_LENGTH));
-        cipher.update(contents);
+            tag: tagBsb});
+        cipher.update(cipherTextBsb);
+
         if (!cipher.finish()) {
             throw new Error('Decryption Error');
         }

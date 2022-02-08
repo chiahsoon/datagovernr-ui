@@ -139,30 +139,30 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
 };
 
 const saveFiles = async (files: File[], password: string, sourceParams: DataverseSourceParams): Promise<void> => {
-    const salts: string[] = [];
+    const saltsBase64: string[] = [];
     const plaintextStrs: string[] = []; // To hash
     const encryptedStrs: string[] = []; // To hash
     const encryptedFiles: File[] = []; // To send to dataverse
     for (const file of files) {
         const fileBuf = await file.arrayBuffer();
-        const [encryptedStr, salt] = encryptWithPassword(fileBuf, password);
-        const encryptedBuf = new TextEncoder().encode(encryptedStr);
+        const [encryptedBinaryStr, saltBase64] = encryptWithPassword(fileBuf, password);
+        const encryptedBuf = new TextEncoder().encode(encryptedBinaryStr);
         const encryptedBlob = new Blob([encryptedBuf]);
         const encryptedFile = new File([encryptedBlob], file.name, {
             type: file.type,
         });
 
-        salts.push(salt);
+        saltsBase64.push(saltBase64);
         plaintextStrs.push(new TextDecoder().decode(fileBuf));
-        encryptedStrs.push(encryptedStr);
+        encryptedStrs.push(encryptedBinaryStr);
         encryptedFiles.push(encryptedFile);
     }
 
     // Add to Dataverse
     const datasetFiles = await addFilesToDataset(sourceParams, encryptedFiles);
 
-    // Add to DG
-    const hashFn = (value: string) => forge.md.sha512.create().update(value).digest().toHex();
+    // Hash and save base64 form (avoid database encoding issues) to DG
+    const hashFn = (value: string) => forge.util.encode64(forge.md.sha512.create().update(value).digest().getBytes());
     const encryptedFileHashes = encryptedStrs.map((encryptedStr) => hashFn(encryptedStr));
     const plaintextHashes = plaintextStrs.map((plaintextStr) => hashFn(plaintextStr));
     const dgFiles: DGFile[] = datasetFiles.map((datasetFile, idx) => {
@@ -170,7 +170,7 @@ const saveFiles = async (files: File[], password: string, sourceParams: Datavers
             id: datasetFile.dataFile.id,
             plaintextHash: plaintextHashes[idx],
             encryptedHash: encryptedFileHashes[idx],
-            salt: salts[idx],
+            salt: saltsBase64[idx],
         };
     });
 

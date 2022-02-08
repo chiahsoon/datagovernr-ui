@@ -43,27 +43,22 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         cipher.finish();
         const cipherTextBsb = cipher.output;
         const tagBsb = cipher.mode.tag;
-        // Convert to hex and concat
-        const ivHex = forge.util.bytesToHex(ivBinary);
-        const cipherTextHex = cipherTextBsb.toHex();
-        const tagHex = tagBsb.toHex();
-        return ivHex + cipherTextHex + tagHex;
+        // Convert to bytes and concat
+        const cipherTextBinary = cipherTextBsb.getBytes();
+        const tagBinary = tagBsb.getBytes();
+        return ivBinary + cipherTextBinary + tagBinary;
     }
 
     decryptFile(dataBinaryBuf: ArrayBuffer): string {
-        const dataHex = new TextDecoder().decode(dataBinaryBuf);
+        const dataBinary = new TextDecoder().decode(dataBinaryBuf);
         // Extract IV from file
-        const ivHex = dataHex.slice(0, AES256GCMInstance.IV_LENGTH * 2);
-        const cipherTextHex = dataHex.slice(
-            AES256GCMInstance.IV_LENGTH * 2,
-            -AES256GCMInstance.TAG_LENGTH * 2,
+        const ivBinary = dataBinary.slice(0, AES256GCMInstance.IV_LENGTH);
+        const cipherTextBinary = dataBinary.slice(
+            AES256GCMInstance.IV_LENGTH,
+            -AES256GCMInstance.TAG_LENGTH,
         );
         // Extract auth tag from file
-        const tagHex = dataHex.slice(-AES256GCMInstance.TAG_LENGTH * 2);
-
-        const ivBinary = forge.util.hexToBytes(ivHex);
-        const cipherTextBinary = forge.util.hexToBytes(cipherTextHex);
-        const tagBinary = forge.util.hexToBytes(tagHex);
+        const tagBinary = dataBinary.slice(-AES256GCMInstance.TAG_LENGTH);
 
         const ivBsb = forge.util.createBuffer(ivBinary);
         const cipherTextBsb = forge.util.createBuffer(cipherTextBinary);

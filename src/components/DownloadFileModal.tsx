@@ -32,7 +32,7 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
             .then(() => message.success('Successfully downloaded file.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))
-            .catch((err) => displayError('Failed to download file!', err))
+            .catch((err: Error) => displayError('Failed to download file: ' + err.message, err))
             .finally(() => setIsDownloading(false));
     };
 
@@ -80,10 +80,10 @@ const decryptAndDownload = async (
     sourceParams: DataverseSourceParams,
     fileId: number,
     fileName: string,
-    salt: string,
+    saltBase64: string,
     password: string): Promise<void> => {
     const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
-    const plaintextBinary = decryptWithPassword(ciphertextBinaryBuf, password, salt);
+    const plaintextBinary = decryptWithPassword(ciphertextBinaryBuf, password, saltBase64);
     const bytes = binaryToByteArray(plaintextBinary);
     const blob = new Blob([bytes]);
     downloadViaATag(fileName, blob);

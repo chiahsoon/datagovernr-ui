@@ -5,17 +5,17 @@ import {FileEncryptionScheme, FileEncryptionService} from './encryption';
 export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string): [string, string] => {
     // 20-byte salt to match output length of PBKDF2 hash function (default SHA-1)
     const saltBinary = forge.random.getBytesSync(20);
-    const saltHexString = forge.util.bytesToHex(saltBinary); // Convert to hex-format to avoid database encoding issues
+    const saltBase64 = forge.util.encode64(saltBinary);
     const keyBinary = generateKey(password, saltBinary);
     const cipher = FileEncryptionService.createEncryptionInstance(FileEncryptionScheme.AES256GCM, keyBinary);
-    const encryptedHexString = cipher.encryptFile(dataBinaryBuf);
-    return [encryptedHexString, saltHexString];
+    const encryptedBinaryString = cipher.encryptFile(dataBinaryBuf);
+    return [encryptedBinaryString, saltBase64];
 };
 
-export const decryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string, saltHex: string): string => {
-    // dataBinaryBuf is a buffer of binary values that stores data in hex format
-    // saltHex is a string that stores the salt in hex format
-    const saltBinary = forge.util.hexToBytes(saltHex);
+export const decryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string, saltBase64: string): string => {
+    // dataBinaryBuf is a buffer that stores the data in binary format
+    // saltBase64 is a string that stores the salt in base64 format
+    const saltBinary = forge.util.decode64(saltBase64);
     const keyBinary = generateKey(password, saltBinary);
     const decipher = FileEncryptionService.createEncryptionInstance(
         FileEncryptionScheme.AES256GCM,

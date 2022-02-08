@@ -1,6 +1,7 @@
 import {DatasetFile} from '../types/datasetFile';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {Dataset} from '../types/dataset';
+import JSZip from 'jszip';
 
 export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams): Promise<Dataset> => {
     const {siteUrl, datasetId} = sourceParams;
@@ -15,23 +16,24 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
 };
 
 export const addFilesToDataset = async (sourceParams: DataverseSourceParams, files: File[]): Promise<DatasetFile[]> => {
-    // TODO: Re-confirm if Dataverse API only supports adding a single file
-    // Seems to only allow adding a single file since additional jsonData is only for a single file
     const url = `${sourceParams.siteUrl}/api/datasets/${sourceParams.datasetId}/add`;
-    let filesArr: DatasetFile[] = [];
-    for (let i = 0; i < files.length; i++) {
-        const formData = new FormData();
-        // TODO: Add formData['jsonData'] if necessary (description, directoryLabel, categories, restrict)
-        formData.append('file', files[i]); // OR 'file[]'
-        const respData = await fetch(url, {
-            method: 'POST',
-            body: formData,
-            headers: {'X-Dataverse-key': sourceParams.apiToken},
-        });
-        const jsonData = await respData.json();
-        filesArr = filesArr.concat(jsonData.data.files);
-    }
-    return filesArr;
+    // When added as zip-file, dataverse automatially unpacks the files
+    const zip = new JSZip();
+    files.forEach((file) => zip.file(file.name, file));
+    const zipFile = await zip.generateAsync({type: 'blob'}).then((content) => {
+        return new File([content], 'data.zip');
+    });
+    // TODO: Add formData['jsonData'] i.e. metadata if necessary
+    const formData = new FormData();
+    formData.append('file', zipFile);
+    const respData = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {'X-Dataverse-key': sourceParams.apiToken},
+    });
+    const jsonData = await respData.json();
+    const empty: DatasetFile[] = [];
+    return empty.concat(jsonData.data.files);
 };
 
 export const downloadFile = async (sourceParams: DataverseSourceParams, fileId: number): Promise<ArrayBuffer> => {

@@ -10,6 +10,7 @@ export const FileVerificationListItem = (props: { file: DGFile }) => {
             <List.Item.Meta
                 title={`File ID: ${id}`}
                 description={`File Hash: ${encryptedHash}`}
+                style={{overflowWrap: 'anywhere'}}
             />
         </List.Item>
     );

@@ -1,0 +1,10 @@
+import forge from 'node-forge';
+
+export const SALT_LENGTH = 64;
+const NUM_ITERATIONS = 10000;
+
+// Key Derivation using PBKDF2-SHA512
+export function generateKey(password: string, salt: string, keyLength: number): string {
+    const md = forge.md.sha512.create();
+    return forge.pkcs5.pbkdf2(password, salt, NUM_ITERATIONS, keyLength, md);
+}

@@ -1,11 +1,11 @@
 import React from 'react';
-import {Button, Table} from 'antd';
+import {Button, Table, Tooltip} from 'antd';
 import {ColumnsType} from 'antd/es/table';
 import {DatasetFile} from '../types/datasetFile';
 import {Link} from 'react-router-dom';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
-import {ExportOutlined} from '@ant-design/icons';
 import {GlobalLocationState} from '../types/globalLocationState';
+import {IoShieldCheckmarkOutline} from 'react-icons/io5';
 
 interface FilesTableProps {
     sourceParams: DataverseSourceParams
@@ -18,13 +18,27 @@ export const FilesTable = (props: FilesTableProps) => {
         {
             title: 'File Name',
             dataIndex: 'label',
+            render: ((_, record) => {
+                return (
+                    <>
+                        {record.label} {
+                            record.dataFile.inDG ?
+                                (<Tooltip title="Encrypted by DataGovernR">
+                                    <IoShieldCheckmarkOutline
+                                        style={{fontSize: '18px', color: '#02B382'}}/>
+                                </Tooltip>) :
+                                null
+                        }
+                    </>
+                );
+            }),
         },
         {
             title: 'Created At',
             dataIndex: ['dataFile', 'creationDate'],
         },
         {
-            title: 'Access Link',
+            title: 'Actions',
             dataIndex: ['dataFile', 'id'],
             render: ((_, record) => {
                 const state: GlobalLocationState = {
@@ -33,8 +47,8 @@ export const FilesTable = (props: FilesTableProps) => {
                     sourceParams,
                 };
                 return (
-                    <Button type="link">
-                        <Link to='/file' state={state}><ExportOutlined /></Link>
+                    <Button type="link" disabled={!record.dataFile.inDG}>
+                        <Link to='/file' state={state}>View</Link>
                     </Button>
                 );
             }),

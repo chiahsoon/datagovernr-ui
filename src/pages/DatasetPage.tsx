@@ -34,7 +34,7 @@ export const DatasetPage = () => {
 
     const fetchAndUpdateDataset = () => {
         getLatestDatasetInfo(sourceParams)
-            .then((latestDatasetInfo) => setDataset(latestDatasetInfo))
+            .then((dataset) => setDataset(dataset))
             .catch((err) => displayError('Failed to fetch valid dataset information!', err));
     };
 

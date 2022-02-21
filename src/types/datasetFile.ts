@@ -21,6 +21,7 @@ export interface DataFile {
     md5: string
     checksum: DataFileChecksum
     creationDate: string
+    inDG: boolean
 }
 
 export interface DataFileChecksum {

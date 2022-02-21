@@ -44,10 +44,10 @@ export const FilePage = () => {
     };
 
     const getLink = (details: VerificationDetails): string | undefined => {
+        if (isNotVerified(details)) return undefined;
         const link = details.verifier.link;
         const isApiLinkPrefix = 'api://';
         const apiUrl = process.env.REACT_APP_API_URL || '';
-        if (isNotVerified(details)) return undefined;
         if (link.startsWith(isApiLinkPrefix)) return link.replace(isApiLinkPrefix, apiUrl + '/');
         return link;
     };

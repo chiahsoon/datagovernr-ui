@@ -2,6 +2,7 @@ import {DatasetFile} from '../types/datasetFile';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {Dataset} from '../types/dataset';
 import JSZip from 'jszip';
+import {checkFilesExistence} from './api';
 
 export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams): Promise<Dataset> => {
     const {siteUrl, datasetId} = sourceParams;
@@ -11,7 +12,11 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
     });
     const jsonData = await resp.json();
     const dataset: Dataset = jsonData.data;
-    dataset.files.forEach((f: DatasetFile) => f.key = f.dataFile.id);
+    dataset.files.forEach((f) => f.key = f.dataFile.id);
+
+    const fileIds = dataset.files.map((f) => f.dataFile.id);
+    const exists = await checkFilesExistence(fileIds);
+    dataset.files.forEach((f, idx) => f.dataFile.inDG = exists[idx]);
     return dataset;
 };
 

@@ -1,12 +1,13 @@
 import React, {useEffect, useState} from 'react';
-import {Button, Col, Descriptions, List, Row, Tooltip, Typography} from 'antd';
+import {Button, Col, Descriptions, List, message, Row, Tooltip, Typography} from 'antd';
 import {ErrorPage} from './ErrorPage';
-import {EmptyVerificationDetails, isNotVerified, VerificationDetails} from '../types/verificationDetails';
+import {EmptyVerificationDetails,
+    getConcatenatedHashes, isNotVerified, VerificationDetails} from '../types/verificationDetails';
 import {getFileVerificationDetails} from '../web/api';
 import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
-import {DownloadOutlined, QuestionCircleOutlined} from '@ant-design/icons';
+import {CopyOutlined, DownloadOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {
     areSourceDatasetParamsIncomplete, getSourceParams,
 } from '../types/dataverseSourceParams';
@@ -15,6 +16,7 @@ import {pageColumnProps} from '../styles/common';
 import {useLocation} from 'react-router-dom';
 import {GlobalLocationState} from '../types/globalLocationState';
 import {DownloadFileModal} from '../components/DownloadFileModal';
+import {HashVerifierForm} from '../components/HashVerifierForm';
 
 const {Text, Link} = Typography;
 
@@ -30,6 +32,7 @@ export const FilePage = () => {
     const sourceParams = getSourceParams();
     const [verificationDetails, setVerificationDetails] = useState(EmptyVerificationDetails);
     const [isDownloadFileModalVisible, setIsDownloadFileModalVisible] = useState(false);
+    const [hashVerifierVisible, setHashVerifierVisible] = useState(false);
 
     if (areSourceDatasetParamsIncomplete(sourceParams) || fileId == null) {
         return <ErrorPage
@@ -58,6 +61,7 @@ export const FilePage = () => {
                 <Col {...pageColumnProps}>
                     <Title level={2} style={{display: 'inline', marginRight: '16px'}}>File Details</Title>
                     <Button
+                        type='primary'
                         icon={<DownloadOutlined />}
                         onClick={() => setIsDownloadFileModalVisible(true)}>
                         Download
@@ -83,9 +87,26 @@ export const FilePage = () => {
                         header={
                             <Title level={5} style={{display: 'inline'}}>
                                 File Hashes Involved in Verification
-                                <Tooltip title="Insert aggregation formula here">
+                                <Tooltip
+                                    title={'Click on the \'Verify Hash\' button to see how the hashes are aggregated.'}>
                                     <QuestionCircleOutlined style={{marginLeft: '8px'}}/>
                                 </Tooltip>
+                                <Button
+                                    icon={<CopyOutlined style={{cursor: 'pointer'}}/>}
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(getConcatenatedHashes(verificationDetails));
+                                        message.success('Copied file hashes to clipboard!');
+                                    }}
+                                    style={{border: '0px'}}/>
+                                <Button
+                                    style={{float: 'right'}}
+                                    onClick={() => setHashVerifierVisible(true)}>
+                                    Verify Hashes
+                                </Button>
+                                <HashVerifierForm
+                                    visible={hashVerifierVisible}
+                                    onCancel={() => setHashVerifierVisible(false)}
+                                />
                             </Title>
                         }
                         bordered

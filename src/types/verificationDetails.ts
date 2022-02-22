@@ -26,3 +26,7 @@ export interface DGFile {
 export const isNotVerified = (details: VerificationDetails) => {
     return details.verifier == null || details.verifier.link === '';
 };
+
+export const getConcatenatedHashes = (details: VerificationDetails) => {
+    return details.files.map((f) => `${f.plaintextHash},${f.encryptedHash}`).join('\n');
+};

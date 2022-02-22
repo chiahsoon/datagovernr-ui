@@ -4,12 +4,18 @@ import {DGFile} from '../types/verificationDetails';
 
 export const FileVerificationListItem = (props: { file: DGFile }) => {
     // TODO: Consider adding names to data
-    const {id, encryptedHash} = props.file;
+    const {id, plaintextHash, encryptedHash} = props.file;
     return (
         <List.Item>
             <List.Item.Meta
                 title={`File ID: ${id}`}
-                description={`File Hash: ${encryptedHash}`}
+                description={
+                    <>
+                    Plaintext Hash: {plaintextHash}
+                        <br/>
+                    Encrypted Hash: {encryptedHash}
+                    </>
+                }
                 style={{overflowWrap: 'anywhere'}}
             />
         </List.Item>

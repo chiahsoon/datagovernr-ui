@@ -55,6 +55,11 @@ export const FilePage = () => {
         return link;
     };
 
+    const parseLinkForHashVerifier = async (): Promise<string> => {
+        // TODO: Parse PDF and get verification link
+        return '';
+    };
+
     return (
         <MainLayout name={'DataGovernR'}>
             <Row gutter={[16, 16]}>
@@ -68,9 +73,9 @@ export const FilePage = () => {
                     </Button>
                 </Col>
                 <Col {...pageColumnProps}>
-                    <Descriptions bordered size='small'>
-                        <Descriptions.Item label="File ID" span={3}>{fileId}</Descriptions.Item>
-                        <Descriptions.Item label="Verification Link" span={3}>
+                    <Descriptions bordered size='small' column={1}>
+                        <Descriptions.Item label="File ID">{fileId}</Descriptions.Item>
+                        <Descriptions.Item label="Proof File">
                             {
                                 getLink(verificationDetails) == null ?
                                     <Text italic>File not verified</Text> :
@@ -100,7 +105,10 @@ export const FilePage = () => {
                                     style={{border: '0px'}}/>
                                 <Button
                                     style={{float: 'right'}}
-                                    onClick={() => setHashVerifierVisible(true)}>
+                                    disabled={isNotVerified(verificationDetails)}
+                                    onClick={() => {
+                                        parseLinkForHashVerifier().then(() => setHashVerifierVisible(true));
+                                    }}>
                                     Verify Hashes
                                 </Button>
                                 <HashVerifierForm

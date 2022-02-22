@@ -1,5 +1,5 @@
-import React from 'react';
-import {Button, Modal, Form, Input, Space, Tabs, Popover, Typography, message} from 'antd';
+import React, {useState} from 'react';
+import {Button, Modal, Form, Input, Space, Tabs, Popover, Typography, Descriptions, Divider} from 'antd';
 import {MinusCircleOutlined, PlusOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {atomOneLight, CodeBlock} from 'react-code-blocks';
 import forge from 'node-forge';
@@ -8,7 +8,7 @@ import {displayError} from '../utils/error';
 import {ATTRIBUTES_KEY, getMerkleRoot, inTree, XMLRootNode, xmlToNode} from '../types/merkleTree';
 
 const {TextArea} = Input;
-const {Text} = Typography;
+const {Text, Title} = Typography;
 const {TabPane} = Tabs;
 
 interface FileHash {
@@ -30,6 +30,51 @@ interface HashVerifierFormProps {
 export const HashVerifierForm = (props: HashVerifierFormProps) => {
     const [form] = Form.useForm();
     const {visible, onCancel} = props;
+    const [finalFilesHash, setFinalFilesHash] = useState('');
+    const [finalFilesHashPresent, setFinalFilesHashPresent] = useState(false);
+    const [actualMerkleRootHash, setActualMerkleRootHash] = useState('');
+    const [providedMerkleRootHash, setProvidedMerkleRootHash] = useState('');
+    const [verificationLink, setVerificationLink] = useState('');
+
+    const cancel = () => {
+        form.resetFields();
+        setFinalFilesHash('');
+        setFinalFilesHashPresent(false);
+        setActualMerkleRootHash('');
+        setProvidedMerkleRootHash('');
+        setVerificationLink('');
+        onCancel();
+    };
+
+    const setOutput = async (value: Values) => {
+        const hashFn = (value: string) => forge.md.sha256.create().update(value).digest().toHex();
+
+        // Aggregate file hashes ()
+        let hashes = '';
+        if (value.defaultHashes != null && value.defaultHashes.length > 0) {
+            hashes += value.defaultHashes
+                .map((fh) => fh.plaintextHash + ',' + fh.encryptedHash)
+                .join('|');
+        } else {
+            const lines = value.rawHashes.split('\n');
+            hashes += lines.join('|');
+        }
+        const finalFilesHash = hashFn(hashes);
+
+        // Parse Merkle Tree XML
+        const parser = new xml2js.Parser({attrkey: ATTRIBUTES_KEY});
+        const mkString = value.merkleTree.replace('</no d e>', '</node>'); // OriginStamp proof copy/paste issue
+        const xmlRoot: XMLRootNode = await parser.parseStringPromise(mkString);
+        const rootNode = xmlToNode(xmlRoot.node);
+
+        const actualMerkleRootHash = getMerkleRoot(rootNode, hashFn);
+        const providedMerkleRootHash = rootNode.attrs.value;
+
+        setFinalFilesHash(finalFilesHash);
+        setFinalFilesHashPresent(inTree(rootNode, finalFilesHash));
+        setActualMerkleRootHash(actualMerkleRootHash);
+        setProvidedMerkleRootHash(providedMerkleRootHash);
+    };
 
     return (
         <Modal
@@ -37,15 +82,10 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
             title="Verify Hash"
             okText="Verify"
             cancelText="Cancel"
-            onCancel={() => {
-                form.resetFields();
-                onCancel();
-            }}
+            onCancel={cancel}
             onOk={() => {
                 form.validateFields()
-                    .then((values) => fileHashesToMerkleRoot(values))
-                    // TODO: Show link (parse to get link), hash output, merkle tree is consistent
-                    .then(() => message.success('The final file hash matches the Merkle Tree\'s root!'))
+                    .then((values: Values) => setOutput(values))
                     .catch((err: Error) => displayError(err.message, err));
             }}
         >
@@ -103,7 +143,6 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
                             <Text type="secondary">(What is this?)</Text>
                         </Popover>
                         <br/>
-                        <br/>
                         <Form.Item name="rawHashes">
                             <TextArea
                                 placeholder="List of file hashes"
@@ -128,43 +167,43 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
                         autoSize={{minRows: 4, maxRows: 8}}/>
                 </Form.Item>
             </Form>
+            <Divider orientation='center' plain><Title level={5}>Output</Title></Divider>
+            <Descriptions
+                bordered
+                column={1}
+                size='small'
+                className='hash-verifier-output-desc' // Override CSS
+                labelStyle={{whiteSpace: 'nowrap'}}>
+                <Descriptions.Item label="Verification Link">{verificationLink}</Descriptions.Item>
+            </Descriptions>
+            <br/>
+            <Descriptions
+                bordered
+                column={1}
+                size='small'
+                className='hash-verifier-output-desc' // Override CSS
+                labelStyle={{whiteSpace: 'nowrap'}}>
+                <Descriptions.Item label="Final Files Hash">{finalFilesHash}</Descriptions.Item>
+                <Descriptions.Item label="Actual Merkle Root Hash">{actualMerkleRootHash}</Descriptions.Item>
+                <Descriptions.Item label="Provided Merkle Root Hash">{providedMerkleRootHash}</Descriptions.Item>
+                <Descriptions.Item label="Files Hash Present?">
+                    {finalFilesHash === '' ? '' : finalFilesHashPresent ? 'Yes' : 'No'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Merkle Root Hashes Match?">
+                    {
+                        actualMerkleRootHash === '' || providedMerkleRootHash === '' ?
+                            '' :
+                            actualMerkleRootHash != '' &&
+                            providedMerkleRootHash != '' &&
+                            actualMerkleRootHash === providedMerkleRootHash ?
+                                'Yes' :
+                                'No'
+                    }
+                </Descriptions.Item>
+            </Descriptions>
         </Modal>
     );
 };
-
-async function fileHashesToMerkleRoot(value: Values): Promise<string> {
-    const hashFn = (value: string) => forge.md.sha256.create().update(value).digest().toHex();
-
-    // Aggregate file hashes
-    let hashes = '';
-    if (value.defaultHashes != null && value.defaultHashes.length > 0) {
-        hashes += value.defaultHashes
-            .map((fh) => fh.plaintextHash + ',' + fh.encryptedHash)
-            .join('|');
-    } else {
-        const lines = value.rawHashes.split('\n');
-        hashes += lines.join('|');
-    }
-    const finalFilesHash = hashFn(hashes);
-
-    // Parse Merkle Tree XML
-    const parser = new xml2js.Parser({attrkey: ATTRIBUTES_KEY});
-    const mkString = value.merkleTree.replace('</no d e>', '</node>'); // A problem in OriginStamp when you copy/paste
-    const xmlRoot: XMLRootNode = await parser.parseStringPromise(mkString);
-    const rootNode = xmlToNode(xmlRoot.node);
-
-    // Validate that finalFilesHash evaluates to the Merkle Tree's root
-    if (!inTree(rootNode, finalFilesHash)) {
-        throw new Error('The final file hash value doesn\'t exist on the Merkle Tree!');
-    }
-
-    const validFinalHash = getMerkleRoot(rootNode, hashFn);
-    if (rootNode.attrs.value != validFinalHash) {
-        throw new Error('The merklised hash value doesn\'t match provided the Merkle Tree\'s root!');
-    }
-
-    return validFinalHash;
-}
 
 const fileHashesHelpContent = (
     <div>

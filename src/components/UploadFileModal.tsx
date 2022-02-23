@@ -139,13 +139,19 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
 };
 
 const saveFiles = async (files: File[], password: string, sourceParams: DataverseSourceParams): Promise<void> => {
+    const splitKeys = false;
+    const keyShareStrs: string[] = []; // To write to file and download
     const saltsBase64: string[] = [];
     const plaintextStrs: string[] = []; // To hash
     const encryptedStrs: string[] = []; // To hash
     const encryptedFiles: File[] = []; // To send to dataverse
     for (const file of files) {
         const fileBuf = await file.arrayBuffer();
-        const [encryptedBinaryStr, saltBase64] = encryptWithPassword(fileBuf, password);
+        const [encryptedBinaryStr, saltBase64] = encryptWithPassword(fileBuf, password,
+            splitKeys? keyShareStrs: undefined);
+        if (splitKeys) {
+            // Further processing
+        }
         const encryptedBuf = new TextEncoder().encode(encryptedBinaryStr);
         const encryptedBlob = new Blob([encryptedBuf]);
         const encryptedFile = new File([encryptedBlob], file.name, {

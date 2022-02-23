@@ -4,7 +4,7 @@ import {FileEncryptionScheme, FileEncryptionService} from './encryption';
 import {splitKey} from './keysplit';
 
 export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string,
-                                    keyShares?: string[]): [string, string] => {
+    keyShares?: string[]): [string, string] => {
     // dataBinaryBuf is a buffer that stores the data in binary format
     const saltBinary = forge.random.getBytesSync(SALT_LENGTH);
     const saltBase64 = forge.util.encode64(saltBinary);

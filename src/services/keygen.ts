@@ -1,8 +1,10 @@
 import forge from 'node-forge';
 import {SALT_LENGTH, generateKey} from './keygen/pbkdf2';
 import {FileEncryptionScheme, FileEncryptionService} from './encryption';
+import {splitKey} from './keysplit';
 
-export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string): [string, string] => {
+export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string,
+                                    keyShares?: string[]): [string, string] => {
     // dataBinaryBuf is a buffer that stores the data in binary format
     const saltBinary = forge.random.getBytesSync(SALT_LENGTH);
     const saltBase64 = forge.util.encode64(saltBinary);
@@ -12,6 +14,9 @@ export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string
         FileEncryptionScheme.AES256GCM,
         keyBinary);
     const encryptedBinaryString = cipher.encryptFile(dataBinaryBuf);
+    if (typeof keyShares !== 'undefined') {
+        keyShares = splitKey(keyBinary);
+    }
     return [encryptedBinaryString, saltBase64];
 };
 

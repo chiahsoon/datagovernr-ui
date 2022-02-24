@@ -168,14 +168,13 @@ const saveFiles = async (sourceParams: DataverseSourceParams, files: File[],
 
         // Convert split keys into appropriately named files
         if (splitKeys && keyShareStrs.length > 0) {
-            console.log('KEYS: ', keyShareStrs);
             for (let idx = 0; idx < keyShareStrs.length; idx++) {
                 const filename = `${file.name.replace('.', '_')}_key-${idx+1}.txt`;
                 const keyShareStr = keyShareStrs[idx];
                 const keyShareBuf = new TextEncoder().encode(keyShareStr);
                 const keyShareBlob = new Blob([keyShareBuf]);
                 const keyShareFile = new File([keyShareBlob], filename, {
-                    type: 'text/plain',
+                    type: 'text/plain', // Mime-type
                 });
                 allKeyShareFiles.push(keyShareFile);
             };

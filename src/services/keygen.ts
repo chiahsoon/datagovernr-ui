@@ -1,7 +1,7 @@
 import forge from 'node-forge';
 import {SALT_LENGTH, generateKey} from './keygen/pbkdf2';
 import {FileEncryptionScheme, FileEncryptionService} from './encryption';
-import {splitKey} from './keysplit';
+import {rebuildKey, splitKey} from './keysplit';
 
 export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string,
     keyShares?: string[]): [string, string] => {
@@ -29,6 +29,18 @@ export const decryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string
     const saltBinary = forge.util.decode64(saltBase64);
     const keyBinary = generateKey(password, saltBinary,
         FileEncryptionService.getKeyLength(FileEncryptionScheme.AES256GCM));
+    const decipher = FileEncryptionService.createEncryptionInstance(
+        FileEncryptionScheme.AES256GCM,
+        keyBinary);
+    return decipher.decryptFile(dataBinaryBuf);
+};
+export const decryptWithShares = (dataBinaryBuf: ArrayBuffer, shareBase64Arr: string[]): string => {
+    // the shares of the key are stored as base64 strings
+    const shareBinaryArr = [];
+    for (let i=0; i<shareBase64Arr.length; i++) {
+        shareBinaryArr.push(forge.util.decode64(shareBase64Arr[i]));
+    }
+    const keyBinary = rebuildKey(shareBinaryArr);
     const decipher = FileEncryptionService.createEncryptionInstance(
         FileEncryptionScheme.AES256GCM,
         keyBinary);

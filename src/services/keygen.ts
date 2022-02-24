@@ -15,7 +15,11 @@ export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string
         keyBinary);
     const encryptedBinaryString = cipher.encryptFile(dataBinaryBuf);
     if (typeof keyShares !== 'undefined') {
-        keyShares = splitKey(keyBinary);
+        const keys = splitKey(keyBinary);
+        for (let idx = 0; idx < keys.length; idx++) {
+            const keyBase64=forge.util.encode64(keys[idx]);
+            keyShares.push(keyBase64);
+        }
     }
     return [encryptedBinaryString, saltBase64];
 };

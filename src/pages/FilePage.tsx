@@ -1,8 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Col, Descriptions, List, message, Row, Tooltip, Typography} from 'antd';
 import {ErrorPage} from './ErrorPage';
-import {EmptyVerificationDetails,
-    getConcatenatedHashes, isNotVerified, VerificationDetails} from '../types/verificationDetails';
+import {EmptyVerificationDetails, getConcatenatedHashes, isNotSentForVerification,
+    isNotVerified, VerificationDetails} from '../types/verificationDetails';
 import {getFileVerificationDetails} from '../web/api';
 import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
@@ -48,6 +48,7 @@ export const FilePage = () => {
 
     const getLink = (details: VerificationDetails): string | undefined => {
         if (isNotVerified(details)) return undefined;
+        console.log('HERE: ', details);
         const link = details.verifier.link;
         const isApiLinkPrefix = 'api://';
         const apiUrl = process.env.REACT_APP_API_URL || '';
@@ -105,7 +106,7 @@ export const FilePage = () => {
                                     style={{border: '0px'}}/>
                                 <Button
                                     style={{float: 'right'}}
-                                    disabled={isNotVerified(verificationDetails)}
+                                    disabled={isNotSentForVerification(verificationDetails)}
                                     onClick={() => {
                                         parseLinkForHashVerifier().then(() => setHashVerifierVisible(true));
                                     }}>

@@ -23,8 +23,12 @@ export interface DGFile {
     salt: string
 }
 
-export const isNotVerified = (details: VerificationDetails) => {
+export const isNotSentForVerification = (details: VerificationDetails) => {
     return details.verifier == null || details.verifier.link === '';
+};
+
+export const isNotVerified = (details: VerificationDetails) => {
+    return isNotSentForVerification(details) || details.verifier.link == null || details.verifier.link === '';
 };
 
 export const getConcatenatedHashes = (details: VerificationDetails) => {

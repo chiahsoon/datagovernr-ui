@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
-import {Col, Form, Input, message, Modal, Row, Switch, Tooltip, Upload} from 'antd';
-import {EyeInvisibleOutlined, EyeTwoTone, InboxOutlined, InfoCircleOutlined} from '@ant-design/icons';
+import {Col, Form, Input, message, Modal, Row, Switch, Tooltip} from 'antd';
+import {EyeInvisibleOutlined, EyeTwoTone, InfoCircleOutlined} from '@ant-design/icons';
 import {UploadFile} from 'antd/es/upload/interface';
 import {addFilesToDataset} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
@@ -9,12 +9,9 @@ import forge from 'node-forge';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
 import {downloadViaATag, getUploadedFilesData} from '../utils/fileHelper';
-import {SimpleError} from './SimpleError';
-import {fieldsErrorRedBorder, fieldsGreyBorder} from '../styles/common';
 import {encryptWithPassword} from '../services/keygen';
 import JSZip from 'jszip';
-
-const {Dragger} = Upload;
+import {UploadFormItem} from './UploadFormItem';
 
 interface UploadFileModalProps {
     sourceParams: DataverseSourceParams
@@ -23,7 +20,7 @@ interface UploadFileModalProps {
     callbackFn: () => void
 }
 
-interface UploadForm {
+interface UploadFormValues {
     genSplitKeys: boolean
     password: string,
     fileList: UploadFile[],
@@ -33,12 +30,12 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     const [form] = Form.useForm();
     const {sourceParams, visible, setVisible, callbackFn} = props;
     const [isUploading, setIsUploading] = useState(false);
-    const [uploadErrorMessage, setUploadErrorMessage] = useState('');
+    const [uploadErrorMsg, setUploadErrorMsg] = useState('');
 
     const onModalOk = () => {
         setIsUploading(true);
         form.validateFields()
-            .then((v: UploadForm) => saveFiles(sourceParams, getUploadedFilesData(v.fileList),
+            .then((v: UploadFormValues) => saveFiles(sourceParams, getUploadedFilesData(v.fileList),
                 v.password, v.genSplitKeys))
             .then(() => message.success('Successfully uploaded all files.'))
             .then(() => form.resetFields())
@@ -54,16 +51,10 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
             content: 'Are you sure you want to cancel? Your data will be lost.',
             onOk: () => {
                 setVisible(false);
-                setUploadErrorMessage('');
+                setUploadErrorMsg('');
                 form.resetFields();
             },
         });
-    };
-
-    const handleFileEvent = (e: any): File[] => {
-        // Handles both add and removal
-        if (Array.isArray(e)) return e;
-        return e && e.fileList;
     };
 
     return (
@@ -90,40 +81,10 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
                 name="upload_files_form">
                 <Row gutter={[16, 16]}>
                     <Col span={24}>
-                        <div> {/* div required to prevent list of uploaded files from eating into elements below */}
-                            <Form.Item
-                                noStyle
-                                name="fileList"
-                                valuePropName="fileList" // key in form.values
-                                getValueFromEvent={handleFileEvent}
-                                rules={[
-                                    // Ref: https://ant.design/components/form/#Rule
-                                    {
-                                        validator(_, value) {
-                                            if (value != null && value.length >= 1) {
-                                                setUploadErrorMessage('');
-                                                return Promise.resolve();
-                                            }
-                                            const msg = 'Please upload at least one file.';
-                                            setUploadErrorMessage(msg);
-                                            return Promise.reject(new Error(msg));
-                                        },
-                                    },
-                                ]}>
-                                <Dragger
-                                    multiple
-                                    style={{borderColor: uploadErrorMessage ? fieldsErrorRedBorder : fieldsGreyBorder}}
-                                    beforeUpload={() => false}> {/* Stops from uploading immediately) */}
-                                    <p className="ant-upload-drag-icon">
-                                        <InboxOutlined style={{color: fieldsGreyBorder}}/>
-                                    </p>
-                                    <p className="ant-upload-text" style={{color: 'grey'}}>
-                                        Click/Drag files here
-                                    </p>
-                                </Dragger>
-                            </Form.Item>
-                            <SimpleError errorMessage={uploadErrorMessage}/>
-                        </div>
+                        <UploadFormItem
+                            formKey='fileList'
+                            errorMsg={uploadErrorMsg}
+                            setErrorMsg={setUploadErrorMsg}/>
                     </Col>
                     <Col span={24}>
                         <Form.Item

@@ -16,18 +16,23 @@ interface FileHash {
     plaintextHash: string;
 }
 
-interface Values {
+interface HashVerifierModalProps {
+    visible: boolean;
+    onCancel: () => void;
+}
+
+interface HashVerifierFormValues {
     merkleTree: string;
     defaultHashes: FileHash[];
     rawHashes: string;
 }
 
-interface HashVerifierFormProps {
-    visible: boolean;
-    onCancel: () => void;
+enum HashVerifierType {
+    Default = 'default',
+    Raw = 'raw',
 }
 
-export const HashVerifierForm = (props: HashVerifierFormProps) => {
+export const HashVerifierModal = (props: HashVerifierModalProps) => {
     const [form] = Form.useForm();
     const {visible, onCancel} = props;
     const [finalFilesHash, setFinalFilesHash] = useState('');
@@ -35,6 +40,7 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
     const [actualMerkleRootHash, setActualMerkleRootHash] = useState('');
     const [providedMerkleRootHash, setProvidedMerkleRootHash] = useState('');
     const [verificationLink, setVerificationLink] = useState('');
+    const [hashVerifierType, setHashVerifierType] = useState(HashVerifierType.Default);
 
     const cancel = () => {
         form.resetFields();
@@ -46,12 +52,12 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
         onCancel();
     };
 
-    const setOutput = async (value: Values) => {
+    const setOutput = async (value: HashVerifierFormValues) => {
         const hashFn = (value: string) => forge.md.sha256.create().update(value).digest().toHex();
 
-        // Aggregate file hashes ()
+        // Aggregate file hashes
         let hashes = '';
-        if (value.defaultHashes != null && value.defaultHashes.length > 0) {
+        if (hashVerifierType === HashVerifierType.Default) {
             hashes += value.defaultHashes
                 .map((fh) => fh.plaintextHash + ',' + fh.encryptedHash)
                 .join('|');
@@ -85,7 +91,7 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
             onCancel={cancel}
             onOk={() => {
                 form.validateFields()
-                    .then((values: Values) => setOutput(values))
+                    .then((values: HashVerifierFormValues) => setOutput(values))
                     .catch((err: Error) => displayError(err.message, err));
             }}
         >
@@ -97,10 +103,8 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
                 <Text strong>Hashes</Text>
                 <Tabs
                     defaultActiveKey="1"
-                    onChange={(activeKey) => {
-                        activeKey === 'default' ? form.resetFields(['defaultHashes']) : form.resetFields(['rawHashes']);
-                    }}>
-                    <TabPane tab="Default" key="default">
+                    onChange={(activeKey) => setHashVerifierType(activeKey as HashVerifierType)}>
+                    <TabPane tab="Default" key={HashVerifierType.Default}>
                         <Form.List name="defaultHashes">
                             {(fields, {add, remove}) => (
                                 <>
@@ -135,7 +139,7 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
                             )}
                         </Form.List>
                     </TabPane>
-                    <TabPane tab="Raw" key="raw">
+                    <TabPane tab="Raw" key={HashVerifierType.Raw}>
                         <Popover
                             content={fileHashesHelpContent}
                             overlayStyle={{whiteSpace: 'pre-line'}}
@@ -152,6 +156,12 @@ export const HashVerifierForm = (props: HashVerifierFormProps) => {
                 </Tabs>
                 <Form.Item
                     name="merkleTree"
+                    rules={[
+                        {
+                            required: true,
+                            message: 'Please fill in the merkle tree data.',
+                        },
+                    ]}
                     label={
                         <span>
                             <Text strong>Merkle Tree</Text>

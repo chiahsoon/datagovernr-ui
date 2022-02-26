@@ -16,7 +16,7 @@ import {pageColumnProps} from '../styles/common';
 import {useLocation} from 'react-router-dom';
 import {GlobalLocationState} from '../types/globalLocationState';
 import {DownloadFileModal} from '../components/DownloadFileModal';
-import {HashVerifierForm} from '../components/HashVerifierForm';
+import {HashVerifierModal} from '../components/HashVerifierModal';
 
 const {Text, Link} = Typography;
 
@@ -112,7 +112,7 @@ export const FilePage = () => {
                                     }}>
                                     Verify Hashes
                                 </Button>
-                                <HashVerifierForm
+                                <HashVerifierModal
                                     visible={hashVerifierVisible}
                                     onCancel={() => setHashVerifierVisible(false)}
                                 />

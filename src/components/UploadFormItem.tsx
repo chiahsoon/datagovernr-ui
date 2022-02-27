@@ -25,7 +25,7 @@ export const UploadFormItem = (props: UploadFormItemProps) => {
             <Form.Item
                 noStyle
                 name={formKey} // key in form.values
-                valuePropName="fileList" // key in child
+                valuePropName='fileList' // key in child
                 getValueFromEvent={handleFileEvent}
                 rules={[
                     // Ref: https://ant.design/components/form/#Rule
@@ -45,10 +45,10 @@ export const UploadFormItem = (props: UploadFormItemProps) => {
                     multiple
                     style={{borderColor: errorMsg ? fieldsErrorRedBorder : fieldsGreyBorder}}
                     beforeUpload={() => false}> {/* Stops from uploading immediately) */}
-                    <p className="ant-upload-drag-icon">
+                    <p className='ant-upload-drag-icon'>
                         <InboxOutlined style={{color: fieldsGreyBorder}}/>
                     </p>
-                    <p className="ant-upload-text" style={{color: 'grey'}}>
+                    <p className='ant-upload-text' style={{color: 'grey'}}>
                         Click/Drag files here
                     </p>
                 </Dragger>

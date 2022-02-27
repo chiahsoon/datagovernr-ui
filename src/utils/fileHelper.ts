@@ -2,6 +2,7 @@
 import {UploadFile} from 'antd/es/upload/interface';
 import {RcFile} from 'antd/lib/upload';
 import {saveAs} from 'file-saver';
+import JSZip from 'jszip';
 import streamSaver from 'streamsaver';
 
 export const getUploadedFilesData = (fileList: UploadFile[]): RcFile[] => {
@@ -18,6 +19,30 @@ export const byteStringToBytes = (binaryString: string): Uint8Array => {
     return bytes;
 };
 
+export const stringsToFiles = (data: [string, string, string][]): File[] => {
+    const files: File[] = [];
+    for (let idx = 0; idx < data.length; idx++) {
+        const [fileName, fileType, dataStr] = data[idx];
+        const buf = new TextEncoder().encode(dataStr);
+        const blob = new Blob([buf]);
+        const file = new File([blob], fileName, {
+            type: fileType, // Mime-type
+        });
+        files.push(file);
+    }
+    return files;
+};
+
+export const zipFiles = async (files: File[], zipFileName: string): Promise<File> => {
+    const zip = new JSZip();
+    files.forEach((file) => zip.file(file.name, file));
+    const zipFile = await zip.generateAsync({type: 'blob'}).then((content) => {
+        return new File([content], zipFileName);
+    });
+    return zipFile;
+};
+
+// Different download methods
 export const downloadViaATag = (fileName: string, data: Blob) => {
     const dataLink = URL.createObjectURL(data);
     const element = document.createElement('a');

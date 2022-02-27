@@ -8,10 +8,10 @@ import {displayError} from '../utils/error';
 import forge from 'node-forge';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
-import {downloadViaATag, getUploadedFilesData} from '../utils/fileHelper';
+import {downloadViaATag, getUploadedFilesData, stringsToFiles, zipFiles} from '../utils/fileHelper';
 import {encryptWithPassword} from '../services/keygen';
-import JSZip from 'jszip';
 import {UploadFormItem} from './UploadFormItem';
+import {filenameToKeyShareName} from '../utils/common';
 
 interface UploadFileModalProps {
     sourceParams: DataverseSourceParams
@@ -62,7 +62,7 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
             title={
                 <span>
                     Upload files to dataset
-                    <Tooltip title="Files will only be uploaded to the draft version.">
+                    <Tooltip title='Files will only be uploaded to the draft version.'>
                         <InfoCircleOutlined style={{marginLeft: '8px'}}/>
                     </Tooltip>
                 </span>
@@ -74,11 +74,11 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
             okButtonProps={{loading: isUploading}}>
             <Form
                 form={form}
-                layout="horizontal"
+                layout='horizontal'
                 labelCol={{span: 8}}
                 labelAlign={'left'}
                 wrapperCol={{span: 16}}
-                name="upload_files_form">
+                name='upload_files_form'>
                 <Row gutter={[16, 16]}>
                     <Col span={24}>
                         <UploadFormItem
@@ -88,20 +88,20 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
                     </Col>
                     <Col span={24}>
                         <Form.Item
-                            name="password"
-                            label="Password"
+                            name='password'
+                            label='Password'
                             rules={[{required: true, message: 'Please enter your password.'}]}>
                             <Input.Password
                                 required
-                                placeholder="Password"
+                                placeholder='Password'
                                 iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                             />
                         </Form.Item>
                         <Form.Item
-                            name="genSplitKeys"
-                            label="Generate Split Keys?"
+                            name='genSplitKeys'
+                            label='Generate Split Keys?'
                             labelCol={{span: 8}}
-                            valuePropName="checked"
+                            valuePropName='checked'
                             initialValue={true}>
                             <Switch defaultChecked/>
                         </Form.Item>
@@ -115,37 +115,29 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
 
 const saveFiles = async (sourceParams: DataverseSourceParams, files: File[],
     password: string, splitKeys: boolean): Promise<void> => {
-    const saltsBase64: string[] = [];
     const plaintextStrs: string[] = []; // To hash
     const encryptedStrs: string[] = []; // To hash
+    const saltsBase64: string[] = []; // To send to api
     const encryptedFiles: File[] = []; // To send to dataverse
-    const allKeyShareFiles: File[] = [];
+    const allKeyShareFiles: File[] = []; // To download
 
     for (const file of files) {
-        const keyShareStrs: string[] = []; // To write split keys into
+        const keyShareBase64Strs: string[] = []; // To write split keys into
         const fileBuf = await file.arrayBuffer();
         const [encryptedBinaryStr, saltBase64] = encryptWithPassword(fileBuf, password,
-            splitKeys? keyShareStrs: undefined);
+            splitKeys? keyShareBase64Strs: undefined);
 
         // Convert split keys into appropriately named files
-        if (splitKeys && keyShareStrs.length > 0) {
-            for (let idx = 0; idx < keyShareStrs.length; idx++) {
-                const filename = `${file.name.replace('.', '_')}_key-${idx+1}.txt`;
-                const keyShareStr = keyShareStrs[idx];
-                const keyShareBuf = new TextEncoder().encode(keyShareStr);
-                const keyShareBlob = new Blob([keyShareBuf]);
-                const keyShareFile = new File([keyShareBlob], filename, {
-                    type: 'text/plain', // Mime-type
-                });
-                allKeyShareFiles.push(keyShareFile);
-            };
+        if (splitKeys && keyShareBase64Strs.length > 0) {
+            const data: [string, string, string][] = keyShareBase64Strs.map((ks, idx) => {
+                const keyFileName = filenameToKeyShareName(file.name, idx);
+                return [keyFileName, 'text/plain', ks];
+            });
+            const keyShareFiles = stringsToFiles(data);
+            allKeyShareFiles.push(...keyShareFiles);
         }
-        const encryptedBuf = new TextEncoder().encode(encryptedBinaryStr);
-        const encryptedBlob = new Blob([encryptedBuf]);
-        const encryptedFile = new File([encryptedBlob], file.name, {
-            type: file.type,
-        });
 
+        const encryptedFile = stringsToFiles([[file.name, file.type, encryptedBinaryStr]])[0];
         saltsBase64.push(saltBase64);
         plaintextStrs.push(new TextDecoder().decode(fileBuf));
         encryptedStrs.push(encryptedBinaryStr);
@@ -169,14 +161,10 @@ const saveFiles = async (sourceParams: DataverseSourceParams, files: File[],
     });
     await saveFilesToDG(dgFiles);
 
-    // Let user download split keys
     if (!splitKeys) return;
 
+    // Let user download split keys as a zip
     const keysFilename = 'keys.zip';
-    const zip = new JSZip();
-    allKeyShareFiles.forEach((file) => zip.file(file.name, file));
-    const zipFile = await zip.generateAsync({type: 'blob'}).then((content) => {
-        return new File([content], keysFilename);
-    });
+    const zipFile = await zipFiles(allKeyShareFiles, keysFilename);
     downloadViaATag(keysFilename, zipFile);
 };

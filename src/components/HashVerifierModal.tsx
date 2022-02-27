@@ -85,9 +85,9 @@ export const HashVerifierModal = (props: HashVerifierModalProps) => {
     return (
         <Modal
             visible={visible}
-            title="Verify Hash"
-            okText="Verify"
-            cancelText="Cancel"
+            title='Verify Hash'
+            okText='Verify'
+            cancelText='Cancel'
             onCancel={cancel}
             onOk={() => {
                 form.validateFields()
@@ -97,40 +97,40 @@ export const HashVerifierModal = (props: HashVerifierModalProps) => {
         >
             <Form
                 form={form}
-                layout="vertical"
-                name="form_in_modal"
+                layout='vertical'
+                name='form_in_modal'
                 initialValues={{ }}>
                 <Text strong>Hashes</Text>
                 <Tabs
-                    defaultActiveKey="1"
+                    defaultActiveKey='1'
                     onChange={(activeKey) => setHashVerifierType(activeKey as HashVerifierType)}>
-                    <TabPane tab="Default" key={HashVerifierType.Default}>
-                        <Form.List name="defaultHashes">
+                    <TabPane tab='Default' key={HashVerifierType.Default}>
+                        <Form.List name='defaultHashes'>
                             {(fields, {add, remove}) => (
                                 <>
                                     {fields.map(({key, name, ...restField}) => (
                                         <Space
                                             key={key}
                                             style={{display: 'flex', marginBottom: 8}}
-                                            align="baseline">
+                                            align='baseline'>
                                             <Form.Item
                                                 {...restField}
                                                 name={[name, 'plaintextHash']}
                                                 rules={[{required: true, message: 'Missing plaintext hash'}]}>
-                                                <Input placeholder="Plaintext Hash" />
+                                                <Input placeholder='Plaintext Hash' />
                                             </Form.Item>
                                             <Form.Item
                                                 {...restField}
                                                 name={[name, 'encryptedHash']}
                                                 rules={[{required: true, message: 'Missing encrypted hash'}]}>
-                                                <Input placeholder="Encrypted Hash" />
+                                                <Input placeholder='Encrypted Hash' />
                                             </Form.Item>
                                             <MinusCircleOutlined onClick={() => remove(name)} />
                                         </Space>
                                     ))}
                                     <Form.Item>
                                         <Button
-                                            type="dashed"
+                                            type='dashed'
                                             onClick={() => add()} block icon={<PlusOutlined />}>
                                         Add Hash
                                         </Button>
@@ -139,23 +139,23 @@ export const HashVerifierModal = (props: HashVerifierModalProps) => {
                             )}
                         </Form.List>
                     </TabPane>
-                    <TabPane tab="Raw" key={HashVerifierType.Raw}>
+                    <TabPane tab='Raw' key={HashVerifierType.Raw}>
                         <Popover
                             content={fileHashesHelpContent}
                             overlayStyle={{whiteSpace: 'pre-line'}}
-                            title="What is this?">
-                            <Text type="secondary">(What is this?)</Text>
+                            title='What is this?'>
+                            <Text type='secondary'>(What is this?)</Text>
                         </Popover>
                         <br/>
-                        <Form.Item name="rawHashes">
+                        <Form.Item name='rawHashes'>
                             <TextArea
-                                placeholder="List of file hashes"
+                                placeholder='List of file hashes'
                                 rows={4}/>
                         </Form.Item>
                     </TabPane>
                 </Tabs>
                 <Form.Item
-                    name="merkleTree"
+                    name='merkleTree'
                     rules={[
                         {
                             required: true,
@@ -167,13 +167,13 @@ export const HashVerifierModal = (props: HashVerifierModalProps) => {
                             <Text strong>Merkle Tree</Text>
                             <Popover
                                 content={merkleTreeHelpContent}
-                                title="Merkle Tree Format">
+                                title='Merkle Tree Format'>
                                 <QuestionCircleOutlined style={{marginLeft: '8px'}}/>
                             </Popover>
                         </span>
                     }>
                     <TextArea
-                        placeholder="Merkle Tree in XML"
+                        placeholder='Merkle Tree in XML'
                         autoSize={{minRows: 4, maxRows: 8}}/>
                 </Form.Item>
             </Form>
@@ -184,7 +184,7 @@ export const HashVerifierModal = (props: HashVerifierModalProps) => {
                 size='small'
                 className='hash-verifier-output-desc' // Override CSS
                 labelStyle={{whiteSpace: 'nowrap'}}>
-                <Descriptions.Item label="Verification Link">{verificationLink}</Descriptions.Item>
+                <Descriptions.Item label='Verification Link'>{verificationLink}</Descriptions.Item>
             </Descriptions>
             <br/>
             <Descriptions
@@ -193,13 +193,13 @@ export const HashVerifierModal = (props: HashVerifierModalProps) => {
                 size='small'
                 className='hash-verifier-output-desc' // Override CSS
                 labelStyle={{whiteSpace: 'nowrap'}}>
-                <Descriptions.Item label="Final Files Hash">{finalFilesHash}</Descriptions.Item>
-                <Descriptions.Item label="Actual Merkle Root Hash">{actualMerkleRootHash}</Descriptions.Item>
-                <Descriptions.Item label="Provided Merkle Root Hash">{providedMerkleRootHash}</Descriptions.Item>
-                <Descriptions.Item label="Files Hash Present?">
+                <Descriptions.Item label='Final Files Hash'>{finalFilesHash}</Descriptions.Item>
+                <Descriptions.Item label='Actual Merkle Root Hash'>{actualMerkleRootHash}</Descriptions.Item>
+                <Descriptions.Item label='Provided Merkle Root Hash'>{providedMerkleRootHash}</Descriptions.Item>
+                <Descriptions.Item label='Files Hash Present?'>
                     {finalFilesHash === '' ? '' : finalFilesHashPresent ? 'Yes' : 'No'}
                 </Descriptions.Item>
-                <Descriptions.Item label="Merkle Root Hashes Match?">
+                <Descriptions.Item label='Merkle Root Hashes Match?'>
                     {
                         actualMerkleRootHash === '' || providedMerkleRootHash === '' ?
                             '' :
@@ -219,14 +219,14 @@ const fileHashesHelpContent = (
     <div>
         <p>
             {
-                `Copy and paste in the hashes of the involved files in the following format:`
+                'Copy and paste in the hashes of the involved files in the following format:'
             }
         </p>
         <p>
             <CodeBlock
                 text={
                     // eslint-disable-next-line max-len
-                    `<File 1's Plaintext Hash>,<File 1's Encrypted Hash>\n<File 2's Plaintext Hash>,<File 2's Encrypted Hash>\n...`
+                    '<File 1\'s Plaintext Hash>,<File 1\'s Encrypted Hash>\n<File 2\'s Plaintext Hash>,<File 2\'s Encrypted Hash>\n...'
                 }
                 language={'text'}
                 showLineNumbers={false}

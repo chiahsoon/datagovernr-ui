@@ -70,17 +70,17 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
             okButtonProps={{loading: isDownloading}}>
             <Form
                 form={form}
-                layout="vertical"
-                name="download_files_form">
+                layout='vertical'
+                name='download_files_form'>
                 <Row gutter={[16, 16]}>
                     <Col span={24}>
                         <Tabs
                             defaultActiveKey={DecryptionType.Password}
                             onChange={(activeKey) => setDecryptionType(activeKey as DecryptionType)}>
-                            <TabPane tab="Password" key={DecryptionType.Password}>
+                            <TabPane tab='Password' key={DecryptionType.Password}>
                                 <Form.Item
-                                    name="password"
-                                    label="Password"
+                                    name='password'
+                                    label='Password'
                                     rules={[
                                         {
                                             required: decryptionType === DecryptionType.Password,
@@ -89,12 +89,12 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
                                     ]}>
                                     <Input.Password
                                         required
-                                        placeholder="Password"
+                                        placeholder='Password'
                                         iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                                     />
                                 </Form.Item>
                             </TabPane>
-                            <TabPane tab="Key Share Files" key={DecryptionType.KeyShareFiles}>
+                            <TabPane tab='Key Share Files' key={DecryptionType.KeyShareFiles}>
                                 <Text strong>Upload your key share text files</Text>
                                 <br/><br/>
                                 <UploadFormItem

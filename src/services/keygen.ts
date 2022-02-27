@@ -24,6 +24,13 @@ export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string
     return [encryptedBinaryString, saltBase64];
 };
 
+export const genKeyShares = (password:string, saltBase64: string): string[] => {
+    const saltBinary = forge.util.decode64(saltBase64);
+    const key = generateKey(password, saltBinary,
+        FileEncryptionService.getKeyLength(FileEncryptionScheme.AES256GCM));
+    return splitKey(key);
+};
+
 export const decryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string, saltBase64: string): string => {
     // saltBase64 is a string that stores the salt in base64 format
     const saltBinary = forge.util.decode64(saltBase64);
@@ -34,6 +41,7 @@ export const decryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string
         keyBinary);
     return decipher.decryptFile(dataBinaryBuf);
 };
+
 export const decryptWithShares = (dataBinaryBuf: ArrayBuffer, shareBase64Arr: string[]): string => {
     // the shares of the key are stored as base64 strings
     const shareBinaryArr = [];

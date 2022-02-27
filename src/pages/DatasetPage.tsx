@@ -57,7 +57,7 @@ export const DatasetPage = () => {
                             {
                                 dataset.versionState === DRAFT_VERSION_STATE ?
                                     <Tooltip title='There are unpublished changes in this Draft version.'>
-                                        <Tag color="orange">Version: Draft</Tag>
+                                        <Tag color='orange'>Version: Draft</Tag>
                                     </Tooltip> :
                                     <Tag color='green'>Version: {getDatasetVersion(dataset).toFixed(2)}</Tag>
                             }

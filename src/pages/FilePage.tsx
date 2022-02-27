@@ -1,13 +1,14 @@
 import React, {useEffect, useState} from 'react';
-import {Button, Col, Descriptions, List, message, Row, Tooltip, Typography} from 'antd';
+import {Button, Col, Descriptions, Dropdown, List, Menu, message, Row, Tooltip, Typography} from 'antd';
 import {ErrorPage} from './ErrorPage';
 import {EmptyVerificationDetails, getConcatenatedHashes, isNotSentForVerification,
-    isNotVerified, VerificationDetails} from '../types/verificationDetails';
+    VerificationDetails} from '../types/verificationDetails';
 import {getFileVerificationDetails} from '../web/api';
 import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
-import {CopyOutlined, DownloadOutlined, QuestionCircleOutlined} from '@ant-design/icons';
+import {CopyOutlined, DeliveredProcedureOutlined, DownloadOutlined,
+    DownOutlined, QuestionCircleOutlined, ShareAltOutlined} from '@ant-design/icons';
 import {
     areSourceDatasetParamsIncomplete, getSourceParams,
 } from '../types/dataverseSourceParams';
@@ -17,8 +18,15 @@ import {useLocation} from 'react-router-dom';
 import {GlobalLocationState} from '../types/globalLocationState';
 import {DownloadFileModal} from '../components/DownloadFileModal';
 import {HashVerifierModal} from '../components/HashVerifierModal';
+import {RegenKeySharesModal} from '../components/RegenKeySharesModal';
 
 const {Text, Link} = Typography;
+
+enum FileActions {
+    Download = 'download',
+    GenKeyShares = 'genKeyShares',
+    Reencrypt = 'rencrypt',
+}
 
 export const FilePage = () => {
     useEffect(() => {
@@ -32,6 +40,7 @@ export const FilePage = () => {
     const sourceParams = getSourceParams();
     const [verificationDetails, setVerificationDetails] = useState(EmptyVerificationDetails);
     const [isDownloadFileModalVisible, setIsDownloadFileModalVisible] = useState(false);
+    const [isRegenKeySharesModalVisible, setIsRegenKeySharesModalVisible] = useState(false);
     const [hashVerifierVisible, setHashVerifierVisible] = useState(false);
 
     if (areSourceDatasetParamsIncomplete(sourceParams) || fileId == null) {
@@ -47,8 +56,8 @@ export const FilePage = () => {
     };
 
     const getLink = (details: VerificationDetails): string | undefined => {
-        if (isNotVerified(details)) return undefined;
-        console.log('HERE: ', details);
+        if (details.verifier == null) return undefined;
+        if (details.verifier.link == null || details.verifier.link === '') return undefined;
         const link = details.verifier.link;
         const isApiLinkPrefix = 'api://';
         const apiUrl = process.env.REACT_APP_API_URL || '';
@@ -61,26 +70,48 @@ export const FilePage = () => {
         return '';
     };
 
+    function handleMenuClick(e: any) {
+        const {key} = e;
+        if (key === FileActions.Download) {
+            setIsDownloadFileModalVisible(true);
+        } else if (key === FileActions.GenKeyShares) {
+            setIsRegenKeySharesModalVisible(true);
+        } else if (key === FileActions.Reencrypt) {
+            message.info('Feature not available yet!');
+        }
+    }
+
     return (
         <MainLayout name={'DataGovernR'}>
             <Row gutter={[16, 16]}>
                 <Col {...pageColumnProps}>
                     <Title level={2} style={{display: 'inline', marginRight: '16px'}}>File Details</Title>
-                    <Button
-                        type='primary'
-                        icon={<DownloadOutlined />}
-                        onClick={() => setIsDownloadFileModalVisible(true)}>
-                        Download
-                    </Button>
+                    <Dropdown
+                        trigger={['click']}
+                        overlay={
+                            <Menu onClick={handleMenuClick}>
+                                <Menu.Item key={FileActions.Download} icon={<DownloadOutlined />}>
+                                    Download
+                                </Menu.Item>
+                                <Menu.Item key={FileActions.GenKeyShares} icon={<ShareAltOutlined />}>
+                                    Generate Key Shares
+                                </Menu.Item>
+                                <Menu.Item key={FileActions.Reencrypt} icon={<DeliveredProcedureOutlined />}>
+                                    Re-encrypt
+                                </Menu.Item>
+                            </Menu>
+                        }>
+                        <Button style={{float: 'right'}}>Options <DownOutlined /></Button>
+                    </Dropdown>
                 </Col>
                 <Col {...pageColumnProps}>
                     <Descriptions bordered size='small' column={1}>
-                        <Descriptions.Item label="File ID">{fileId}</Descriptions.Item>
-                        <Descriptions.Item label="Proof File">
+                        <Descriptions.Item label='File ID'>{fileId}</Descriptions.Item>
+                        <Descriptions.Item label='Proof File'>
                             {
                                 getLink(verificationDetails) == null ?
                                     <Text italic>File not verified</Text> :
-                                    <Link href={getLink(verificationDetails)} target="_blank">
+                                    <Link href={getLink(verificationDetails)} target='_blank'>
                                         {getLink(verificationDetails)}
                                     </Link>
                             }
@@ -89,10 +120,10 @@ export const FilePage = () => {
                 </Col>
                 <Col {...pageColumnProps}>
                     <List
-                        size="large"
+                        size='large'
                         header={
                             <Title level={5} style={{display: 'inline'}}>
-                                File Hashes Involved in Verification
+                                File Hashes Involved
                                 <Tooltip
                                     title={'Click on the \'Verify Hash\' button to see how the hashes are aggregated.'}>
                                     <QuestionCircleOutlined style={{marginLeft: '8px'}}/>
@@ -131,6 +162,12 @@ export const FilePage = () => {
                 salt={getSalt()}
                 visible={isDownloadFileModalVisible}
                 setVisible={setIsDownloadFileModalVisible}/>
+            <RegenKeySharesModal
+                sourceParams={sourceParams}
+                fileName={fileName || ''}
+                salt={getSalt()}
+                visible={isRegenKeySharesModalVisible}
+                setVisible={setIsRegenKeySharesModalVisible}/>
         </MainLayout>
     );
 };

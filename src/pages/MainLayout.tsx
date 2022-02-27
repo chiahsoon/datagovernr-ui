@@ -18,7 +18,7 @@ const MainLayout = (props: MainLayoutProps) => {
         <Layout style={{minHeight: '100vh', background: 'white'}} >
             <Header>
                 <Link to='/' state={{sourceParams}} style={{color: 'white'}}>{name}</Link>
-                <Menu theme="dark" mode="horizontal" />
+                <Menu theme='dark' mode='horizontal' />
             </Header>
             <Content>
                 <div style={{padding: '1em'}}>

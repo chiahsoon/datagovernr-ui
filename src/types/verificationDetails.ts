@@ -7,7 +7,9 @@ export const EmptyVerificationDetails: VerificationDetails = {
 };
 
 export interface VerificationDetails {
-    verifier: Verifier
+    // files.length >= 1 since file itself should be involved in its verification
+    // even if there's no verifier
+    verifier?: Verifier
     files: DGFile[]
 }
 
@@ -25,10 +27,6 @@ export interface DGFile {
 
 export const isNotSentForVerification = (details: VerificationDetails) => {
     return details.verifier == null || details.verifier.link === '';
-};
-
-export const isNotVerified = (details: VerificationDetails) => {
-    return isNotSentForVerification(details) || details.verifier.link == null || details.verifier.link === '';
 };
 
 export const getConcatenatedHashes = (details: VerificationDetails) => {

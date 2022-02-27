@@ -9,9 +9,7 @@ import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
 import {CopyOutlined, DeliveredProcedureOutlined, DownloadOutlined,
     DownOutlined, QuestionCircleOutlined, ShareAltOutlined} from '@ant-design/icons';
-import {
-    areSourceDatasetParamsIncomplete, getSourceParams,
-} from '../types/dataverseSourceParams';
+import {areSourceDatasetParamsIncomplete, getSourceParams} from '../types/dataverseSourceParams';
 import {FileVerificationListItem} from '../components/FileVerificationListItem';
 import {pageColumnProps} from '../styles/common';
 import {useLocation} from 'react-router-dom';
@@ -85,7 +83,7 @@ export const FilePage = () => {
         <MainLayout name={'DataGovernR'}>
             <Row gutter={[16, 16]}>
                 <Col {...pageColumnProps}>
-                    <Title level={2} style={{display: 'inline', marginRight: '16px'}}>File Details</Title>
+                    <Title level={3} style={{display: 'inline', marginRight: '16px'}}>{fileName}</Title>
                     <Dropdown
                         trigger={['click']}
                         overlay={

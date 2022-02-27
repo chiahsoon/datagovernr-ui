@@ -1,7 +1,7 @@
 import React from 'react';
 import {EyeTwoTone, EyeInvisibleOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {Form, Input, message, Modal, Tooltip} from 'antd';
-import {genKeyShares} from '../services/keygen';
+import {genKeySharesFromPassword} from '../services/keygen';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
 import {downloadViaATag, stringsToFiles, zipFiles} from '../utils/fileHelper';
@@ -83,7 +83,7 @@ const genKeySharesToDownload = async (
     password: string,
     salt: string,
     fileName: string) => {
-    const keyShares = genKeyShares(password, salt);
+    const keyShares = genKeySharesFromPassword(password, salt);
     const data: [string, string, string][] = keyShares.map((ks, idx) => {
         const keyFileName = filenameToKeyShareName(fileName, idx);
         const ksBase64 = forge.util.encode64(ks);

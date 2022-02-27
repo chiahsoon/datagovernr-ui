@@ -24,7 +24,7 @@ export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string
     return [encryptedBinaryString, saltBase64];
 };
 
-export const genKeyShares = (password:string, saltBase64: string): string[] => {
+export const genKeySharesFromPassword = (password:string, saltBase64: string): string[] => {
     const saltBinary = forge.util.decode64(saltBase64);
     const key = generateKey(password, saltBinary,
         FileEncryptionService.getKeyLength(FileEncryptionScheme.AES256GCM));

@@ -51,11 +51,13 @@ export const DatasetPage = () => {
                     {getDatasetTitle(dataset) === '' ?
                         <Skeleton paragraph={{rows: 0}}/> :
                         <div>
-                            <Title style={{display: 'inline', marginRight: '16px'}}>{getDatasetTitle(dataset)}</Title>
+                            <Title
+                                level={2}
+                                style={{display: 'inline', marginRight: '16px'}}>{getDatasetTitle(dataset)}</Title>
                             {
                                 dataset.versionState === DRAFT_VERSION_STATE ?
                                     <Tooltip title='There are unpublished changes in this Draft version.'>
-                                        <Tag color="orange">Version: Draft</Tag>
+                                        <Tag color='orange'>Version: Draft</Tag>
                                     </Tooltip> :
                                     <Tag color='green'>Version: {getDatasetVersion(dataset).toFixed(2)}</Tag>
                             }

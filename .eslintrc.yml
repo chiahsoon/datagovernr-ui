@@ -23,6 +23,8 @@ rules: {
   "require-jsdoc": "off",
   "react/jsx-filename-extension": [ "warn", {"extensions": [".tsx"]} ],
   "react/no-unescaped-entities": "off",
+  "quotes": ["error", "single"],
+  "jsx-quotes": ["error", "prefer-single"]
 }
 settings:
   react:

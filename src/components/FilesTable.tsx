@@ -5,7 +5,7 @@ import {DatasetFile} from '../types/datasetFile';
 import {Link} from 'react-router-dom';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {GlobalLocationState} from '../types/globalLocationState';
-import {IoShieldCheckmarkOutline} from 'react-icons/io5';
+import {SafetyCertificateOutlined} from '@ant-design/icons';
 
 interface FilesTableProps {
     sourceParams: DataverseSourceParams
@@ -23,9 +23,9 @@ export const FilesTable = (props: FilesTableProps) => {
                     <>
                         {record.label} {
                             record.dataFile.inDG ?
-                                (<Tooltip title="Encrypted by DataGovernR">
-                                    <IoShieldCheckmarkOutline
-                                        style={{fontSize: '18px', color: '#02B382'}}/>
+                                (<Tooltip title='Encrypted by DataGovernR'>
+                                    <SafetyCertificateOutlined
+                                        style={{fontSize: '14px', color: '#02B382'}}/>
                                 </Tooltip>) :
                                 null
                         }
@@ -47,7 +47,7 @@ export const FilesTable = (props: FilesTableProps) => {
                     sourceParams,
                 };
                 return (
-                    <Button type="link" disabled={!record.dataFile.inDG}>
+                    <Button type='link' disabled={!record.dataFile.inDG}>
                         <Link to='/file' state={state}>View</Link>
                     </Button>
                 );

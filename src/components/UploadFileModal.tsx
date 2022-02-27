@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
-import {Col, Form, Input, message, Modal, Row, Tooltip, Upload} from 'antd';
-import {EyeInvisibleOutlined, EyeTwoTone, InboxOutlined, InfoCircleOutlined} from '@ant-design/icons';
+import {Col, Form, Input, message, Modal, Row, Switch, Tooltip} from 'antd';
+import {EyeInvisibleOutlined, EyeTwoTone, InfoCircleOutlined} from '@ant-design/icons';
 import {UploadFile} from 'antd/es/upload/interface';
 import {addFilesToDataset} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
@@ -8,12 +8,10 @@ import {displayError} from '../utils/error';
 import forge from 'node-forge';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
-import {getUploadedFilesData} from '../utils/fileHelper';
-import {SimpleError} from './SimpleError';
-import {fieldsErrorRedBorder, fieldsGreyBorder} from '../styles/common';
+import {downloadViaATag, getUploadedFilesData, stringsToFiles, zipFiles} from '../utils/fileHelper';
 import {encryptWithPassword} from '../services/keygen';
-
-const {Dragger} = Upload;
+import {UploadFormItem} from './UploadFormItem';
+import {filenameToKeyShareName} from '../utils/common';
 
 interface UploadFileModalProps {
     sourceParams: DataverseSourceParams
@@ -22,21 +20,23 @@ interface UploadFileModalProps {
     callbackFn: () => void
 }
 
-interface UploadForm {
+interface UploadFormValues {
+    genSplitKeys: boolean
     password: string,
-    fileList: UploadFile[]
+    fileList: UploadFile[],
 }
 
 export const UploadFileModal = (props: UploadFileModalProps) => {
     const [form] = Form.useForm();
     const {sourceParams, visible, setVisible, callbackFn} = props;
     const [isUploading, setIsUploading] = useState(false);
-    const [uploadErrorMessage, setUploadErrorMessage] = useState('');
+    const [uploadErrorMsg, setUploadErrorMsg] = useState('');
 
     const onModalOk = () => {
         setIsUploading(true);
         form.validateFields()
-            .then((v: UploadForm) => saveFiles(getUploadedFilesData(v.fileList), v.password, sourceParams))
+            .then((v: UploadFormValues) => saveFiles(sourceParams, getUploadedFilesData(v.fileList),
+                v.password, v.genSplitKeys))
             .then(() => message.success('Successfully uploaded all files.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))
@@ -51,16 +51,10 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
             content: 'Are you sure you want to cancel? Your data will be lost.',
             onOk: () => {
                 setVisible(false);
-                setUploadErrorMessage('');
+                setUploadErrorMsg('');
                 form.resetFields();
             },
         });
-    };
-
-    const handleFileEvent = (e: any): File[] => {
-        // Handles both add and removal
-        if (Array.isArray(e)) return e;
-        return e && e.fileList;
     };
 
     return (
@@ -68,7 +62,7 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
             title={
                 <span>
                     Upload files to dataset
-                    <Tooltip title="Files will only be uploaded to the draft version.">
+                    <Tooltip title='Files will only be uploaded to the draft version.'>
                         <InfoCircleOutlined style={{marginLeft: '8px'}}/>
                     </Tooltip>
                 </span>
@@ -80,55 +74,36 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
             okButtonProps={{loading: isUploading}}>
             <Form
                 form={form}
-                layout="vertical"
-                name="upload_files_form">
+                layout='horizontal'
+                labelCol={{span: 8}}
+                labelAlign={'left'}
+                wrapperCol={{span: 16}}
+                name='upload_files_form'>
                 <Row gutter={[16, 16]}>
                     <Col span={24}>
-                        <div> {/* div required to prevent list of uploaded files from eating into elements below */}
-                            <Form.Item
-                                noStyle
-                                name="fileList"
-                                valuePropName="fileList" // key in form.values
-                                getValueFromEvent={handleFileEvent}
-                                rules={[
-                                    // Ref: https://ant.design/components/form/#Rule
-                                    {
-                                        validator(_, value) {
-                                            if (value != null && value.length >= 1) {
-                                                setUploadErrorMessage('');
-                                                return Promise.resolve();
-                                            }
-                                            const msg = 'Please upload at least one file.';
-                                            setUploadErrorMessage(msg);
-                                            return Promise.reject(new Error(msg));
-                                        },
-                                    },
-                                ]}>
-                                <Dragger
-                                    multiple
-                                    style={{borderColor: uploadErrorMessage ? fieldsErrorRedBorder : fieldsGreyBorder}}
-                                    beforeUpload={() => false}> {/* Stops from uploading immediately) */}
-                                    <p className="ant-upload-drag-icon">
-                                        <InboxOutlined style={{color: fieldsGreyBorder}}/>
-                                    </p>
-                                    <p className="ant-upload-text" style={{color: 'grey'}}>
-                                        Click/Drag files here
-                                    </p>
-                                </Dragger>
-                            </Form.Item>
-                            <SimpleError errorMessage={uploadErrorMessage}/>
-                        </div>
+                        <UploadFormItem
+                            formKey='fileList'
+                            errorMsg={uploadErrorMsg}
+                            setErrorMsg={setUploadErrorMsg}/>
                     </Col>
                     <Col span={24}>
                         <Form.Item
-                            name="password"
-                            label="Password"
+                            name='password'
+                            label='Password'
                             rules={[{required: true, message: 'Please enter your password.'}]}>
                             <Input.Password
                                 required
-                                placeholder="Password"
+                                placeholder='Password'
                                 iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                             />
+                        </Form.Item>
+                        <Form.Item
+                            name='genSplitKeys'
+                            label='Generate Split Keys?'
+                            labelCol={{span: 8}}
+                            valuePropName='checked'
+                            initialValue={true}>
+                            <Switch defaultChecked/>
                         </Form.Item>
                     </Col>
                 </Row>
@@ -138,20 +113,31 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     );
 };
 
-const saveFiles = async (files: File[], password: string, sourceParams: DataverseSourceParams): Promise<void> => {
-    const saltsBase64: string[] = [];
+const saveFiles = async (sourceParams: DataverseSourceParams, files: File[],
+    password: string, splitKeys: boolean): Promise<void> => {
     const plaintextStrs: string[] = []; // To hash
     const encryptedStrs: string[] = []; // To hash
+    const saltsBase64: string[] = []; // To send to api
     const encryptedFiles: File[] = []; // To send to dataverse
-    for (const file of files) {
-        const fileBuf = await file.arrayBuffer();
-        const [encryptedBinaryStr, saltBase64] = encryptWithPassword(fileBuf, password);
-        const encryptedBuf = new TextEncoder().encode(encryptedBinaryStr);
-        const encryptedBlob = new Blob([encryptedBuf]);
-        const encryptedFile = new File([encryptedBlob], file.name, {
-            type: file.type,
-        });
+    const allKeyShareFiles: File[] = []; // To download
 
+    for (const file of files) {
+        const keyShareBase64Strs: string[] = []; // To write split keys into
+        const fileBuf = await file.arrayBuffer();
+        const [encryptedBinaryStr, saltBase64] = encryptWithPassword(fileBuf, password,
+            splitKeys? keyShareBase64Strs: undefined);
+
+        // Convert split keys into appropriately named files
+        if (splitKeys && keyShareBase64Strs.length > 0) {
+            const data: [string, string, string][] = keyShareBase64Strs.map((ks, idx) => {
+                const keyFileName = filenameToKeyShareName(file.name, idx);
+                return [keyFileName, 'text/plain', ks];
+            });
+            const keyShareFiles = stringsToFiles(data);
+            allKeyShareFiles.push(...keyShareFiles);
+        }
+
+        const encryptedFile = stringsToFiles([[file.name, file.type, encryptedBinaryStr]])[0];
         saltsBase64.push(saltBase64);
         plaintextStrs.push(new TextDecoder().decode(fileBuf));
         encryptedStrs.push(encryptedBinaryStr);
@@ -173,6 +159,12 @@ const saveFiles = async (files: File[], password: string, sourceParams: Datavers
             salt: saltsBase64[idx],
         };
     });
-
     await saveFilesToDG(dgFiles);
+
+    if (!splitKeys) return;
+
+    // Let user download split keys as a zip
+    const keysFilename = 'keys.zip';
+    const zipFile = await zipFiles(allKeyShareFiles, keysFilename);
+    downloadViaATag(keysFilename, zipFile);
 };

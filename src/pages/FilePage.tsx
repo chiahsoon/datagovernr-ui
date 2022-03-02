@@ -7,7 +7,7 @@ import {getFileVerificationDetails} from '../web/api';
 import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
-import {CopyOutlined, DeliveredProcedureOutlined, DownloadOutlined,
+import {CopyOutlined, DownloadOutlined,
     DownOutlined, QuestionCircleOutlined, ShareAltOutlined} from '@ant-design/icons';
 import {areSourceDatasetParamsIncomplete, getSourceParams} from '../types/dataverseSourceParams';
 import {FileVerificationListItem} from '../components/FileVerificationListItem';
@@ -94,9 +94,9 @@ export const FilePage = () => {
                                 <Menu.Item key={FileActions.GenKeyShares} icon={<ShareAltOutlined />}>
                                     Generate Key Shares
                                 </Menu.Item>
-                                <Menu.Item key={FileActions.Reencrypt} icon={<DeliveredProcedureOutlined />}>
+                                {/* <Menu.Item key={FileActions.Reencrypt} icon={<DeliveredProcedureOutlined />}>
                                     Re-encrypt
-                                </Menu.Item>
+                                </Menu.Item> */}
                             </Menu>
                         }>
                         <Button style={{float: 'right'}}>Options <DownOutlined /></Button>

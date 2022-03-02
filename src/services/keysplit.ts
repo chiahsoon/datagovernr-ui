@@ -14,11 +14,11 @@ export const splitKey = (keyBinary: string, numShares: number =2): string[] => {
     return [otpBinary, cipherBinary];
     */
     if (!Number.isInteger(numShares) || numShares < 2) {
-        throw new RangeError("Invalid parameter.");
+        throw new RangeError('Invalid parameter.');
     }
     let tempBinary = keyBinary.slice();
     let randBinary = '';
-    let shareArray = [];
+    const shareArray = [];
     for (let j = 1; j < numShares; j++) {
         randBinary = forge.random.getBytesSync(keyBinary.length);
         let cipherBinary = '';
@@ -34,7 +34,7 @@ export const splitKey = (keyBinary: string, numShares: number =2): string[] => {
 
 export const rebuildKey = (shareBinaryArr: string[]): string => {
     if (shareBinaryArr.length < 2) {
-        throw new RangeError("Not enough shares.");
+        throw new RangeError('Not enough shares.');
     }
     let keyBinary = shareBinaryArr[0].slice();
     let tempBinary = '';

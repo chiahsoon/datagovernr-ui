@@ -12,11 +12,21 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
     });
     const jsonData = await resp.json();
     const dataset: Dataset = jsonData.data;
-    dataset.files.forEach((f) => f.key = f.dataFile.id);
 
-    const fileIds = dataset.files.map((f) => f.dataFile.id);
-    const exists = await checkFilesExistence(fileIds);
-    dataset.files.forEach((f, idx) => f.dataFile.inDG = exists[idx]);
+    // Fill in extra attributes
+    const exists = await checkFilesExistence(dataset.files.map((f) => f.dataFile.id));
+    dataset.files.forEach((f, idx) => {
+        f.dataFile.inDG = exists[idx];
+        f.key = f.dataFile.id;
+    });
+
+    // Sort and reverse to get latest file first
+    dataset.files.sort((a, b) => {
+        const aDate = new Date(a.dataFile.creationDate);
+        const bDate = new Date(b.dataFile.creationDate);
+        return aDate > bDate ? 1 : (aDate < bDate ? -1 : 0);
+    });
+    dataset.files = dataset.files.reverse();
     return dataset;
 };
 

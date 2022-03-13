@@ -2,8 +2,8 @@
 import {UploadFile} from 'antd/es/upload/interface';
 import {RcFile} from 'antd/lib/upload';
 import {saveAs} from 'file-saver';
-import JSZip from 'jszip';
 import streamSaver from 'streamsaver';
+import {zipSync} from 'fflate';
 
 export const getUploadedFilesData = (fileList: UploadFile[]): RcFile[] => {
     return fileList
@@ -34,11 +34,14 @@ export const stringsToFiles = (data: [string, string, string][]): File[] => {
 };
 
 export const zipFiles = async (files: File[], zipFileName: string): Promise<File> => {
-    const zip = new JSZip();
-    files.forEach((file) => zip.file(file.name, file));
-    const zipFile = await zip.generateAsync({type: 'blob'}).then((content) => {
-        return new File([content], zipFileName);
-    });
+    const zipObj: {[name: string]: Uint8Array} = {};
+    for (const file of files) {
+        zipObj[file.name] = new Uint8Array(await file.arrayBuffer());
+    }
+
+    const zipU8 = zipSync(zipObj);
+    const zipBlob = new Blob([zipU8]);
+    const zipFile = new File([zipBlob], zipFileName);
     return zipFile;
 };
 

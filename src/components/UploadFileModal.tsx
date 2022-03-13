@@ -5,11 +5,10 @@ import {UploadFile} from 'antd/es/upload/interface';
 import {addFilesToDataset} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
-import forge from 'node-forge';
+import {encryptWithPassword} from '../services/keygen';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
 import {downloadViaATag, getUploadedFilesData, stringsToFiles, zipFiles} from '../utils/fileHelper';
-import {encryptWithPassword} from '../services/keygen';
 import {UploadFormItem} from './UploadFormItem';
 import {filenameToKeyShareName} from '../utils/common';
 
@@ -115,6 +114,8 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
 
 const saveFiles = async (sourceParams: DataverseSourceParams, files: File[],
     password: string, splitKeys: boolean): Promise<void> => {
+    const beforeSaving = Date.now();
+
     const plaintextStrs: string[] = []; // To hash
     const encryptedStrs: string[] = []; // To hash
     const saltsBase64: string[] = []; // To send to api
@@ -144,13 +145,11 @@ const saveFiles = async (sourceParams: DataverseSourceParams, files: File[],
         encryptedFiles.push(encryptedFile);
     }
 
-    // Add to Dataverse
-    const datasetFiles = await addFilesToDataset(sourceParams, encryptedFiles);
+    const [datasetFiles, [encryptedFileHashes, plaintextHashes]] = await Promise.all([
+        addFilesToDataset(sourceParams, encryptedFiles),
+        hashUsingWorkers(plaintextStrs, encryptedStrs),
+    ]);
 
-    // Hash and save base64 form (avoid database encoding issues) to DG
-    const hashFn = (value: string) => forge.util.encode64(forge.md.sha512.create().update(value).digest().getBytes());
-    const encryptedFileHashes = encryptedStrs.map((encryptedStr) => hashFn(encryptedStr));
-    const plaintextHashes = plaintextStrs.map((plaintextStr) => hashFn(plaintextStr));
     const dgFiles: DGFile[] = datasetFiles.map((datasetFile, idx) => {
         return {
             id: datasetFile.dataFile.id,
@@ -161,10 +160,25 @@ const saveFiles = async (sourceParams: DataverseSourceParams, files: File[],
     });
     await saveFilesToDG(dgFiles);
 
-    if (!splitKeys) return;
-
     // Let user download split keys as a zip
+    if (!splitKeys) return;
     const keysFilename = 'keys.zip';
     const zipFile = await zipFiles(allKeyShareFiles, keysFilename);
     downloadViaATag(keysFilename, zipFile);
+
+    console.log('Save Files Time Taken: ', (Date.now() - beforeSaving) / 1000);
+};
+
+const hashUsingWorkers = (plaintextStrs: string[], encryptedStrs: string[]): Promise<[string[], string[]]> => {
+    const worker = new Worker(new URL('../workers/hash.ts', import.meta.url));
+    return new Promise((resolve) => {
+        worker.onmessage = (e) => {
+            const hashedStrs: string[] = e.data;
+            const plaintextHashes = hashedStrs.slice(0, plaintextStrs.length);
+            const encryptedHashes = hashedStrs.slice(plaintextStrs.length);
+            resolve([plaintextHashes, encryptedHashes]);
+            worker.terminate();
+        };
+        worker.postMessage([...plaintextStrs, ...encryptedStrs]);
+    });
 };

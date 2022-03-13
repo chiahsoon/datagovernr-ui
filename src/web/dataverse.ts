@@ -1,8 +1,8 @@
 import {DatasetFile} from '../types/datasetFile';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {Dataset} from '../types/dataset';
-import JSZip from 'jszip';
 import {checkFilesExistence} from './api';
+import {zipFiles} from '../utils/fileHelper';
 
 export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams): Promise<Dataset> => {
     const {siteUrl, datasetId} = sourceParams;
@@ -32,12 +32,7 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
 
 export const addFilesToDataset = async (sourceParams: DataverseSourceParams, files: File[]): Promise<DatasetFile[]> => {
     const url = `${sourceParams.siteUrl}/api/datasets/${sourceParams.datasetId}/add`;
-    // When added as zip-file, dataverse automatially unpacks the files
-    const zip = new JSZip();
-    files.forEach((file) => zip.file(file.name, file));
-    const zipFile = await zip.generateAsync({type: 'blob'}).then((content) => {
-        return new File([content], 'data.zip');
-    });
+    const zipFile = await zipFiles(files, 'data.zip'); // dataverse automatially unpacks the files
     // TODO: Add formData['jsonData'] i.e. metadata if necessary
     const formData = new FormData();
     formData.append('file', zipFile);

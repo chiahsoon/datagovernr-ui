@@ -6,6 +6,7 @@ export class AES256GCMInstance implements FileEncryptionInstance {
      *  nonce | ciphertext | tag
      *  12    | *          | 16 bytes
      */
+    static readonly CHUNK_SIZE = 1024 * 64;
     static readonly IV_LENGTH = 12;
     static readonly TAG_LENGTH = 16;
     // AES-256 uses a 256-bit = 32-byte key
@@ -39,7 +40,11 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
         });
         // Encrypt the plaintext
-        cipher.update(forge.util.createBuffer(dataBinaryBuf));
+        for (let idx = 0; idx < dataBinaryBuf.byteLength; idx += AES256GCMInstance.CHUNK_SIZE) {
+            const slice = dataBinaryBuf.slice(idx, idx + AES256GCMInstance.CHUNK_SIZE);
+            cipher.update(forge.util.createBuffer(slice));
+        }
+        // cipher.update(forge.util.createBuffer(dataBinaryBuf));
         cipher.finish();
         const cipherTextBsb = cipher.output;
         const tagBsb = cipher.mode.tag;
@@ -61,22 +66,32 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         const tagBinary = dataBinary.slice(-AES256GCMInstance.TAG_LENGTH);
 
         const ivBsb = forge.util.createBuffer(ivBinary);
-        const cipherTextBsb = forge.util.createBuffer(cipherTextBinary);
         const tagBsb = forge.util.createBuffer(tagBinary);
 
         // Instantiate the cipher
-        const cipher = forge.cipher.createDecipher('AES-GCM', this.key);
-        cipher.start({
+        // const cipherTextBsb = forge.util.createBuffer(cipherTextBinary);
+        const decipher = forge.cipher.createDecipher('AES-GCM', this.key);
+        decipher.start({
             iv: ivBsb,
             additionalData: '',
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
             tag: tagBsb});
-        cipher.update(cipherTextBsb);
+        // cipher.update(cipherTextBsb);
+        // if (!decipher.finish()) {
+        //     throw new Error('Decryption Error');
+        // }
+        // return decipher.output.getBytes();
 
-        if (!cipher.finish()) {
+        let decryptedStr = '';
+        for (let idx = 0; idx < cipherTextBinary.length; idx += AES256GCMInstance.CHUNK_SIZE) {
+            const slice = cipherTextBinary.slice(idx, idx + AES256GCMInstance.CHUNK_SIZE);
+            decipher.update(forge.util.createBuffer(slice));
+        }
+        if (!decipher.finish()) {
             throw new Error('Decryption Error');
         }
-        return cipher.output.getBytes();
+        decryptedStr += decipher.output.getBytes();
+        return decryptedStr;
     }
 
     isValidKey(key: string):boolean {

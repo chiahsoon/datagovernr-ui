@@ -5,7 +5,7 @@ import {downloadFile} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
 import {decryptWithPassword, decryptWithShares} from '../services/keygen';
-import {byteStringToBytes as binaryToByteArray, downloadViaATag} from '../utils/fileHelper';
+import {binStrToBytes as binaryToByteArray, downloadViaATag} from '../utils/fileHelper';
 import {UploadFormItem} from './UploadFormItem';
 import {UploadFile} from 'antd/lib/upload/interface';
 

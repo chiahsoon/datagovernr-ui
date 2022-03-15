@@ -4,10 +4,11 @@ import {EyeInvisibleOutlined, EyeTwoTone} from '@ant-design/icons';
 import {downloadFile} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
-import {decryptWithPassword, decryptWithShares} from '../services/keygen';
-import {binStrToBytes as binaryToByteArray, downloadViaATag} from '../utils/fileHelper';
+import {decryptWithPasswordToStream, decryptWithShares} from '../services/keygen';
+import {downloadViaStreamSaver} from '../utils/fileHelper';
 import {UploadFormItem} from './UploadFormItem';
 import {UploadFile} from 'antd/lib/upload/interface';
+import {createStream} from '../utils/streams';
 
 const {TabPane} = Tabs;
 const {Text} = Typography;
@@ -116,9 +117,10 @@ const passwordDecryptDownload = async (
     fileName: string,
     saltBase64: string,
     password: string): Promise<void> => {
+    const stream = createStream();
     const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
-    const plaintextBinary = decryptWithPassword(ciphertextBinaryBuf, password, saltBase64);
-    promptDownload(plaintextBinary, fileName);
+    await decryptWithPasswordToStream(ciphertextBinaryBuf, password, saltBase64, stream.writable);
+    downloadViaStreamSaver(fileName, stream.readable);
 };
 
 const keyShareFilesDecryptDownload = async (
@@ -126,18 +128,14 @@ const keyShareFilesDecryptDownload = async (
     fileId: number,
     fileName: string,
     keyShareFiles: UploadFile[]): Promise<void> => {
-    const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
     const fileToStringPromises: Promise<string>[] = [];
     keyShareFiles.forEach((f) => {
         if (f.originFileObj != null ) fileToStringPromises.push(f.originFileObj.text());
     });
     const keyShareStrings = await Promise.all(fileToStringPromises);
-    const plaintextBinary = decryptWithShares(ciphertextBinaryBuf, keyShareStrings);
-    promptDownload(plaintextBinary, fileName);
-};
 
-const promptDownload = (plaintextBinary: string, fileName: string) => {
-    const bytes = binaryToByteArray(plaintextBinary);
-    const blob = new Blob([bytes]);
-    downloadViaATag(fileName, blob);
+    const stream = createStream();
+    const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
+    await decryptWithShares(ciphertextBinaryBuf, keyShareStrings, stream.writable);
+    await downloadViaStreamSaver(fileName, stream.readable);
 };

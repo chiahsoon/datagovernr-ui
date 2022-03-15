@@ -5,6 +5,7 @@ export interface FileEncryptionInstance {
     encryptFile(dataBinaryBuf: ArrayBuffer): string;
     encryptFileToStream(dataBinaryBuf: ArrayBuffer, result: WritableStream): Promise<void>;
     decryptFile(dataBinaryBuf: ArrayBuffer): string;
+    decryptFileToStream(dataBinaryBuf: ArrayBuffer, result: WritableStream): Promise<void>;
 }
 
 export enum FileEncryptionScheme {

@@ -1,15 +1,21 @@
-import * as forge from 'node-forge';
+import {md, util} from 'node-forge';
 
-self.onmessage = (e: MessageEvent<[string[], string[]]>) => {
-    const hashFn = (value: string) => forge.util.encode64(forge.md.sha512.create().update(value).digest().getBytes());
-    const [plaintextStrs, encryptedStrs] = e.data;
-    const plaintextHashes = plaintextStrs.map((plaintextStr) => hashFn(plaintextStr));
-    const encryptedFileHashes = encryptedStrs.map((encryptedStr) => hashFn(encryptedStr));
-    self.postMessage([plaintextHashes, encryptedFileHashes]);
+self.onmessage = (e: MessageEvent<ArrayBuffer[]>) => {
+    const dataBinBufs = e.data;
+    const hashes: string[] = [];
+    for (let idx = 0; idx < dataBinBufs.length; idx++) {
+        const dataBinBuf = dataBinBufs[idx];
+        const chunkSize = 64 * 1024;
+        const hasher = md.sha512.create();
+        for (let i = 0; i < dataBinBuf.byteLength; i+=chunkSize) {
+            console.log('Hashing buffer ...');
+            const chunkBinBuf = dataBinBuf.slice(i, i + chunkSize);
+            const chunkBinStr = new TextDecoder().decode(chunkBinBuf);
+            hasher.update(chunkBinStr);
+        }
+        // Fixed size so safe to store as string
+        hashes.push(util.encode64(hasher.digest().getBytes()));
+    }
+    self.postMessage(hashes);
 };
 
-self.onmessage = (e: MessageEvent<string[]>) => {
-    const hashFn = (value: string) => forge.util.encode64(forge.md.sha512.create().update(value).digest().getBytes());
-    const strs = e.data;
-    self.postMessage(strs.map((str) => hashFn(str)));
-};

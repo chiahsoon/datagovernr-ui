@@ -3,7 +3,7 @@ import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {Dataset} from '../types/dataset';
 import {checkFilesExistence} from './api';
 import {zipFilesStream} from '../utils/fileHelper';
-import {createStream} from '../utils/streams';
+import {createStream, streamToArr} from '../utils/streams';
 
 export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams): Promise<Dataset> => {
     const {siteUrl, datasetId} = sourceParams;
@@ -33,24 +33,10 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
 
 export const addFilesToDataset = async (
     sourceParams: DataverseSourceParams,
-    streams: [ReadableStream, string][]): Promise<DatasetFile[]> => {
-    // Convert to files
-    const files = await Promise.all(streams.map(async ([s, filename]) => {
-        const reader = s.getReader();
-        const blobParts: BlobPart[] = [];
-        for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-            blobParts.push(chunk.value);
-        }
-        return new File(blobParts, filename);
-    }));
-
+    files: File[]): Promise<DatasetFile[]> => {
     const stream = createStream();
     await zipFilesStream(files, stream.writable);
-    const zippedReader = stream.readable.getReader();
-    const zippedBlobParts: BlobPart[] = [];
-    for (let chunk = await zippedReader.read(); !chunk.done; chunk = await zippedReader.read()) {
-        zippedBlobParts.push(chunk.value);
-    }
+    const zippedBlobParts: BlobPart[] = await streamToArr(stream.readable);
     const zipFile = new File(zippedBlobParts, 'data.zip');
 
     // TODO: Add formData['jsonData'] i.e. metadata if necessary
@@ -74,3 +60,14 @@ export const downloadFile = async (sourceParams: DataverseSourceParams, fileId: 
     const data = await resp.blob();
     return await data.arrayBuffer();
 };
+
+// export const downloadFileStream = async (
+//     sourceParams: DataverseSourceParams,
+//     fileId: number): Promise<ReadableStream<string>> => {
+//     let url = `${sourceParams.siteUrl}/api/access/datafile/${fileId}?format=original`;
+//     if (sourceParams.apiToken != null) url += `&key=${sourceParams.apiToken}`;
+//     const resp = await fetch(url);
+//     const body = resp.body;
+//     if (body == null) throw new Error('Response body is null');
+//     return body.pipeThrough(new TextDecoderStream());
+// };

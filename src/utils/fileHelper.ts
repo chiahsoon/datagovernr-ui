@@ -54,6 +54,7 @@ export const zipFilesStream = async (files: File[], out: WritableStream) => {
     const writer = out.getWriter();
     const zip = new Zip((err, dat, final) => {
         if (err) throw Error('failed to zip');
+        console.log('Zipping ...');
         writer.write(dat);
         if (final) writer.close();
     });

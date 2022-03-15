@@ -13,7 +13,12 @@ export const ErrorPage = (props: ErrorPageProps) => {
     return (
         <Row align={'middle'} style={{textAlign: 'center', minHeight: '80vh'}}>
             <Col span={8} offset={8}>
-                <Card title={<Title level={3}><ExclamationCircleOutlined />{title}</Title>}>
+                <Card title={
+                    <Title level={3}>
+                        <ExclamationCircleOutlined style={{paddingRight: '8px'}}/>
+                        {title}
+                    </Title>
+                }>
                     <Title level={5}>{message}</Title>
                 </Card>
             </Col>

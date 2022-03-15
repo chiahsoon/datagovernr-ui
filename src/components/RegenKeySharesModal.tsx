@@ -4,9 +4,11 @@ import {Form, Input, message, Modal, Tooltip} from 'antd';
 import {genKeySharesFromPassword} from '../services/keygen';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
-import {downloadViaATag, stringsToFiles, zipFiles} from '../utils/fileHelper';
+import {stringsToFiles} from '../utils/file';
 import forge from 'node-forge';
 import {filenameToKeyShareName} from '../utils/common';
+import {downloadViaATag} from '../utils/download';
+import {zipFiles} from '../utils/zip';
 
 interface RegenKeySharesFormValues {
     password: string,

@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import forge from 'node-forge';
-import {createStream} from '../../utils/streams';
+import {bufToDecodedStream, CHUNK_SIZE, createStream} from '../../utils/streams';
 import {FileEncryptionInstance} from '../encryption';
 
 export class AES256GCMInstance implements FileEncryptionInstance {
@@ -8,7 +8,6 @@ export class AES256GCMInstance implements FileEncryptionInstance {
      *  nonce | ciphertext | tag
      *  12    | *          | 16 bytes
      */
-    static readonly CHUNK_SIZE = 64 * 1024;
     static readonly IV_LENGTH = 12;
     static readonly TAG_LENGTH = 16;
     // AES-256 uses a 256-bit = 32-byte key
@@ -42,8 +41,8 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
         });
         // Encrypt the plaintext
-        for (let idx = 0; idx < dataBinaryBuf.byteLength; idx += AES256GCMInstance.CHUNK_SIZE) {
-            const slice = dataBinaryBuf.slice(idx, idx + AES256GCMInstance.CHUNK_SIZE);
+        for (let idx = 0; idx < dataBinaryBuf.byteLength; idx += CHUNK_SIZE) {
+            const slice = dataBinaryBuf.slice(idx, idx + CHUNK_SIZE);
             cipher.update(forge.util.createBuffer(slice));
         }
         cipher.finish();
@@ -55,8 +54,9 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         return ivBinary + cipherTextBinary + tagBinary;
     }
 
-    async encryptFileToStream(dataBinaryBuf: ArrayBuffer, result: WritableStream) {
-        const writer = result.getWriter();
+    async encryptFileToStream(dataBinaryBuf: ArrayBuffer): Promise<ReadableStream<string>> {
+        const result = createStream();
+        const writer = result.writable.getWriter();
         const ivBinary = this.generateNewNonce();
         writer.write(new TextEncoder().encode(ivBinary));
 
@@ -68,8 +68,8 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
         });
         // Encrypt the plaintext
-        for (let idx = 0; idx < dataBinaryBuf.byteLength; idx += AES256GCMInstance.CHUNK_SIZE) {
-            const chunk = dataBinaryBuf.slice(idx, idx + AES256GCMInstance.CHUNK_SIZE);
+        for (let idx = 0; idx < dataBinaryBuf.byteLength; idx += CHUNK_SIZE) {
+            const chunk = dataBinaryBuf.slice(idx, idx + CHUNK_SIZE);
             cipher.update(forge.util.createBuffer(chunk));
             const encryptedChunk = cipher.output.getBytes();
             writer.write(new TextEncoder().encode(encryptedChunk));
@@ -81,6 +81,7 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         const tagBinary = cipher.mode.tag.getBytes();
         writer.write(new TextEncoder().encode(tagBinary));
         writer.close();
+        return result.readable;
     }
 
     decryptFile(dataBinaryBuf: ArrayBuffer): string {
@@ -105,8 +106,8 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
             tag: tagBsb});
         let decryptedStr = '';
-        for (let idx = 0; idx < cipherTextBinary.length; idx += AES256GCMInstance.CHUNK_SIZE) {
-            const slice = cipherTextBinary.slice(idx, idx + AES256GCMInstance.CHUNK_SIZE);
+        for (let idx = 0; idx < cipherTextBinary.length; idx += CHUNK_SIZE) {
+            const slice = cipherTextBinary.slice(idx, idx + CHUNK_SIZE);
             decipher.update(forge.util.createBuffer(slice));
         }
         if (!decipher.finish()) {
@@ -116,8 +117,9 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         return decryptedStr;
     }
 
-    async decryptFileToStream(dataBinaryBuf: ArrayBuffer, result: WritableStream) {
-        const writer = result.getWriter();
+    async decryptFileToStream(dataBinaryBuf: ArrayBuffer): Promise<ReadableStream<string>> {
+        const result = createStream();
+        const writer = result.writable.getWriter();
         let [ivBinary, tagBinary] = ['', ''];
         let [ivIdx, tagIdx] = [0, dataBinaryBuf.byteLength - 1];
 
@@ -140,17 +142,7 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         const ivBsb = forge.util.createBuffer(ivBinary);
         const tagBsb = forge.util.createBuffer(tagBinary);
 
-
-        // Stream convert using TextDecoderStream
-        const tempStream = createStream();
-        const tempWriter = tempStream.writable.getWriter();
-        for (let idx = 0; idx < ciphertextBuf.byteLength; idx += AES256GCMInstance.CHUNK_SIZE) {
-            const chunk = ciphertextBuf.slice(idx, idx + AES256GCMInstance.CHUNK_SIZE);
-            tempWriter.write(chunk);
-        }
-        tempWriter.close();
-
-        const decodedStream = tempStream.readable.pipeThrough(new TextDecoderStream());
+        const decodedStream = await bufToDecodedStream(ciphertextBuf);
         const decodedReader = decodedStream.getReader();
 
         // Instantiate the cipher
@@ -168,11 +160,10 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             console.log('Decrypting ...');
         }
 
-        if (!decipher.finish()) {
-            throw new Error('Decryption Error');
-        }
+        if (!decipher.finish()) throw new Error('Decryption Error');
         writer.write(new TextEncoder().encode(decipher.output.getBytes()));
         writer.close();
+        return result.readable;
     }
 
     isValidKey(key: string):boolean {

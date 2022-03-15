@@ -1,14 +1,13 @@
 import React, {useState} from 'react';
 import {Col, Form, Input, message, Modal, Row, Tabs, Typography} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone} from '@ant-design/icons';
-import {downloadFile} from '../web/dataverse';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
-import {decryptWithPasswordToStream, decryptWithShares} from '../services/keygen';
-import {downloadViaStreamSaver} from '../utils/fileHelper';
+import {decryptWithPasswordToStream, decryptWithSharesToStream} from '../services/keygen';
+import {downloadViaStreamSaver} from '../utils/download';
 import {UploadFormItem} from './UploadFormItem';
 import {UploadFile} from 'antd/lib/upload/interface';
-import {createStream} from '../utils/streams';
+import {downloadFile} from '../web/dataverse';
 
 const {TabPane} = Tabs;
 const {Text} = Typography;
@@ -99,6 +98,7 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
                                 <Text strong>Upload your key share text files</Text>
                                 <br/><br/>
                                 <UploadFormItem
+                                    validateErrors={decryptionType === DecryptionType.KeyShareFiles}
                                     formKey={DecryptionType.KeyShareFiles}
                                     errorMsg={uploadErrorMsg}
                                     setErrorMsg={setUploadErrorMsg}/>
@@ -117,10 +117,9 @@ const passwordDecryptDownload = async (
     fileName: string,
     saltBase64: string,
     password: string): Promise<void> => {
-    const stream = createStream();
     const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
-    await decryptWithPasswordToStream(ciphertextBinaryBuf, password, saltBase64, stream.writable);
-    downloadViaStreamSaver(fileName, stream.readable);
+    const decryptedStream = await decryptWithPasswordToStream(ciphertextBinaryBuf, password, saltBase64);
+    downloadViaStreamSaver(fileName, decryptedStream.pipeThrough(new TextDecoderStream()));
 };
 
 const keyShareFilesDecryptDownload = async (
@@ -134,8 +133,7 @@ const keyShareFilesDecryptDownload = async (
     });
     const keyShareStrings = await Promise.all(fileToStringPromises);
 
-    const stream = createStream();
     const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
-    await decryptWithShares(ciphertextBinaryBuf, keyShareStrings, stream.writable);
-    await downloadViaStreamSaver(fileName, stream.readable);
+    const decryptedStream = await decryptWithSharesToStream(ciphertextBinaryBuf, keyShareStrings);
+    await downloadViaStreamSaver(fileName, decryptedStream.pipeThrough(new TextDecoderStream()));
 };

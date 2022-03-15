@@ -8,10 +8,12 @@ import {displayError} from '../utils/error';
 import {encryptWithPasswordToBuf} from '../services/keygen';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
-import {downloadViaATag, getUploadedFilesData, stringsToFiles, zipFiles} from '../utils/fileHelper';
+import {getUploadedFilesData, stringsToFiles} from '../utils/file';
 import {UploadFormItem} from './UploadFormItem';
 import {filenameToKeyShareName} from '../utils/common';
 import {md, util} from 'node-forge';
+import {zipFiles} from '../utils/zip';
+import {downloadViaATag} from '../utils/download';
 
 interface UploadFileModalProps {
     sourceParams: DataverseSourceParams

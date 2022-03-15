@@ -2,8 +2,8 @@ import {DatasetFile} from '../types/datasetFile';
 import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {Dataset} from '../types/dataset';
 import {checkFilesExistence} from './api';
-import {zipFilesStream} from '../utils/fileHelper';
-import {createStream, streamToArr} from '../utils/streams';
+import {streamToArr} from '../utils/streams';
+import {zipFilesStream} from '../utils/zip';
 
 export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams): Promise<Dataset> => {
     const {siteUrl, datasetId} = sourceParams;
@@ -34,9 +34,8 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
 export const addFilesToDataset = async (
     sourceParams: DataverseSourceParams,
     files: File[]): Promise<DatasetFile[]> => {
-    const stream = createStream();
-    await zipFilesStream(files, stream.writable);
-    const zippedBlobParts: BlobPart[] = await streamToArr(stream.readable);
+    const zipStream = await zipFilesStream(files);
+    const zippedBlobParts: BlobPart[] = await streamToArr(zipStream);
     const zipFile = new File(zippedBlobParts, 'data.zip');
 
     // TODO: Add formData['jsonData'] i.e. metadata if necessary
@@ -60,14 +59,3 @@ export const downloadFile = async (sourceParams: DataverseSourceParams, fileId: 
     const data = await resp.blob();
     return await data.arrayBuffer();
 };
-
-// export const downloadFileStream = async (
-//     sourceParams: DataverseSourceParams,
-//     fileId: number): Promise<ReadableStream<string>> => {
-//     let url = `${sourceParams.siteUrl}/api/access/datafile/${fileId}?format=original`;
-//     if (sourceParams.apiToken != null) url += `&key=${sourceParams.apiToken}`;
-//     const resp = await fetch(url);
-//     const body = resp.body;
-//     if (body == null) throw new Error('Response body is null');
-//     return body.pipeThrough(new TextDecoderStream());
-// };

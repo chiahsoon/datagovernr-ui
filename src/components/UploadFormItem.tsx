@@ -6,13 +6,14 @@ import {fieldsErrorRedBorder, fieldsGreyBorder} from '../styles/common';
 import {SimpleError} from './SimpleError';
 
 interface UploadFormItemProps {
+    validateErrors?: boolean
     formKey: string
     errorMsg: string
     setErrorMsg: (msg: string) => void,
 }
 
 export const UploadFormItem = (props: UploadFormItemProps) => {
-    const {formKey, errorMsg, setErrorMsg} = props;
+    const {formKey, errorMsg, validateErrors, setErrorMsg} = props;
 
     const handleFileEvent = (e: any): File[] => {
         // Handles both add and removal
@@ -31,7 +32,7 @@ export const UploadFormItem = (props: UploadFormItemProps) => {
                     // Ref: https://ant.design/components/form/#Rule
                     {
                         validator(_, value) {
-                            if (value != null && value.length >= 1) {
+                            if (validateErrors === false || (value != null && value.length >= 1)) {
                                 setErrorMsg('');
                                 return Promise.resolve();
                             }

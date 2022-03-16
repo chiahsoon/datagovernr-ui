@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import forge from 'node-forge';
-import {bufToDecodedStream, CHUNK_SIZE, createStream} from '../../utils/streams';
+import {bufToDecodedStream, CHUNK_SIZE, createStream} from '../../utils/stream';
 import {FileEncryptionInstance} from '../encryption';
 
 export class AES256GCMInstance implements FileEncryptionInstance {

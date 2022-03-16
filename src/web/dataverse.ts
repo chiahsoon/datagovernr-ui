@@ -2,7 +2,7 @@ import {DatasetFile} from '../types/datasetFile';
 import {DataverseParams} from '../types/dataverseParams';
 import {Dataset} from '../types/dataset';
 import {checkFilesExistence} from './api';
-import {streamToArr} from '../utils/streams';
+import {streamToArr} from '../utils/stream';
 import {zipFilesStream} from '../utils/zip';
 
 export const getLatestDatasetInfo = async (dvParams: DataverseParams): Promise<Dataset> => {

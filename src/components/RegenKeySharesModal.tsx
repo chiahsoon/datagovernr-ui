@@ -1,7 +1,7 @@
 import React from 'react';
 import {EyeTwoTone, EyeInvisibleOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {Form, Input, message, Modal, Tooltip} from 'antd';
-import {genKeySharesFromPassword} from '../services/keygen';
+import {genKeySharesFromPassword} from '../services/password';
 import {displayError} from '../utils/error';
 import {stringsToFiles} from '../utils/file';
 import forge from 'node-forge';

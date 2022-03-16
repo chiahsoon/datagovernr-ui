@@ -20,7 +20,7 @@ export const streamToArr = async (stream: ReadableStream): Promise<any[]> => {
     return res;
 };
 
-export const bufToDecodedStream = async (buf: ArrayBuffer): Promise<ReadableStream<string>> => {
+export const bufToDecodedStream = (buf: ArrayBuffer): ReadableStream<string> => {
     const stream = createStream();
     const tempWriter = stream.writable.getWriter();
     for (let idx = 0; idx < buf.byteLength; idx += CHUNK_SIZE) {

@@ -5,7 +5,7 @@ import {UploadFile} from 'antd/es/upload/interface';
 import {addFilesToDataset} from '../web/dataverse';
 import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
-import {encryptWithPasswordToBuf} from '../services/keygen';
+import {encryptWithPasswordToBuf} from '../services/password';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
 import {getUploadedFilesData, stringsToFiles} from '../utils/file';
@@ -37,7 +37,7 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     const onModalOk = () => {
         setIsUploading(true);
         form.validateFields()
-            .then(async (v: UploadFormValues) => saveFiles(dvParams,
+            .then(async (v: UploadFormValues) => upload(dvParams,
                 getUploadedFilesData(v.fileList), v.password, v.genSplitKeys))
             .then(() => message.success('Successfully uploaded all files.'))
             .then(() => form.resetFields())
@@ -115,7 +115,7 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     );
 };
 
-const saveFiles = async (
+const upload = async (
     dvParams: DataverseParams,
     files: File[],
     password: string,
@@ -123,21 +123,21 @@ const saveFiles = async (
     const beforeSaving = Date.now();
 
     const saltsBase64: string[] = []; // To send to api
-    const plaintextHashes: string[] = []; // To send to api
-    const encryptedHashes: string[] = []; // To send to api
+    const plaintextBufs: ArrayBuffer[] = []; // To SHA-512, encode64 then send to api
+    const encryptedBufs: ArrayBuffer[] = []; // To SHA-512, encode64 then send to api
     const encryptedFiles: File[] = []; // To send to dataverse
     const allKeyShareFiles: File[] = []; // To download
 
     for (const file of files) {
         const fileBuf = await file.arrayBuffer();
-        plaintextHashes.push(hashDataBuf(fileBuf));
+        plaintextBufs.push(fileBuf);
 
         const keyShareBase64Strs: string[] = []; // To write split keys into
         const [encryptedBuf, saltBase64] = await encryptWithPasswordToBuf(
             fileBuf, password, splitKeys ? keyShareBase64Strs : undefined);
         saltsBase64.push(saltBase64);
 
-        encryptedHashes.push(hashDataBuf(encryptedBuf));
+        encryptedBufs.push(encryptedBuf);
         encryptedFiles.push(new File([encryptedBuf], file.name));
 
         // Convert split keys into appropriately named files
@@ -145,7 +145,18 @@ const saveFiles = async (
         allKeyShareFiles.push(...genKeyShareFiles(keyShareBase64Strs, file.name));
     }
 
-    const datasetFiles = await addFilesToDataset(dvParams, encryptedFiles);
+    const [datasetFiles, plaintextHashes, encryptedHashes] = await Promise.all([
+        addFilesToDataset(dvParams, encryptedFiles),
+        hashBufs(plaintextBufs),
+        hashBufs(encryptedBufs),
+    ]);
+
+    // // This will lead to memory problems; need to fix
+    // const [datasetFiles, [plaintextHashes, encryptedHashes]] = await Promise.all([
+    //     addFilesToDataset(dvParams, encryptedFiles),
+    //     hashOnWorker(plaintextBufs, encryptedBufs),
+    // ]);
+
     const dgFiles: DGFile[] = datasetFiles.map((datasetFile, idx) => {
         return {
             id: datasetFile.dataFile.id,
@@ -172,32 +183,31 @@ const genKeyShareFiles = (keyShares: string[], filename: string): File[] => {
     return stringsToFiles(data);
 };
 
-const hashDataBuf = (dataBinBuf: ArrayBuffer): string => {
-    const chunkSize = 64 * 1024;
-    const hasher = md.sha512.create();
-    for (let i = 0; i < dataBinBuf.byteLength; i+=chunkSize) {
-        console.log('Hashing buffer ...');
-        const chunkBinBuf = dataBinBuf.slice(i, i + chunkSize);
-        const chunkBinStr = new TextDecoder().decode(chunkBinBuf);
-        hasher.update(chunkBinStr);
+const hashBufs = (binBufs: ArrayBuffer[]): string[] => {
+    const res: string[] = [];
+    for (let idx = 0; idx < binBufs.length; idx += 1) {
+        const binBuf = binBufs[idx];
+        const chunkSize = 64 * 1024;
+        const hasher = md.sha512.create();
+        for (let i = 0; i < binBuf.byteLength; i+=chunkSize) {
+            console.log('Hashing buffer ...');
+            const chunkBinBuf = binBuf.slice(i, i + chunkSize);
+            const chunkBinStr = new TextDecoder().decode(chunkBinBuf);
+            hasher.update(chunkBinStr);
+        }
+        // Fixed size so safe to store as string
+        res.push(util.encode64(hasher.digest().getBytes()));
     }
-    // Fixed size so safe to store as string
-    return util.encode64(hasher.digest().getBytes());
+    return res;
 };
 
-// const hashDataBufUsingWorkers = (
+// // Hash via web workers
+// const hashOnWorker = async (
 //     plaintextBufs: ArrayBuffer[],
 //     encryptedBufs: ArrayBuffer[]): Promise<[string[], string[]]> => {
-//     const worker = new Worker(new URL('../workers/hash.ts', import.meta.url));
-//     return new Promise((resolve) => {
-//         worker.onmessage = (e) => {
-//             const hashes: string[] = e.data;
-//             const plaintextHashes = hashes.slice(0, plaintextBufs.length);
-//             const encryptedHashes = hashes.slice(plaintextBufs.length);
-//             resolve([plaintextHashes, encryptedHashes]);
-//             worker.terminate();
-//         };
-//         const data = [...plaintextBufs, ...encryptedBufs];
-//         worker.postMessage(data, data);
-//     });
+//     const data = [...plaintextBufs, ...encryptedBufs];
+//     const hashes = await hashBufsWithWorkers(data);
+//     const plaintextHashes = hashes.slice(0, plaintextBufs.length);
+//     const encryptedHashes = hashes.slice(plaintextBufs.length);
+//     return [plaintextHashes, encryptedHashes];
 // };

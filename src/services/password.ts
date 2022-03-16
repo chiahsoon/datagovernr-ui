@@ -2,7 +2,7 @@ import {util, random} from 'node-forge';
 import {SALT_LENGTH, generateKey} from './keygen/pbkdf2';
 import {FileEncryptionScheme, FileEncryptionService} from './encryption';
 import {rebuildKey, splitKey} from './keysplit';
-import {streamToArr} from '../utils/streams';
+import {streamToArr} from '../utils/stream';
 
 export const encryptWithPassword = (dataBinaryBuf: ArrayBuffer, password: string,
     keyShares?: string[]): [string, string] => {

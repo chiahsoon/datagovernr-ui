@@ -1,5 +1,5 @@
 import {zipSync, Zip, ZipDeflate} from 'fflate';
-import {createStream} from './streams';
+import {createStream} from './stream';
 
 export const zipFiles = async (files: File[], zipFileName: string): Promise<File> => {
     const zipObj: {[name: string]: Uint8Array} = {};

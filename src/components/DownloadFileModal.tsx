@@ -3,7 +3,7 @@ import {Col, Form, Input, message, Modal, Row, Tabs, Typography} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone} from '@ant-design/icons';
 import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
-import {decryptWithPasswordToStream, decryptWithSharesToStream} from '../services/keygen';
+import {decryptWithPasswordToStream, decryptWithSharesToStream} from '../services/password';
 import {downloadViaStreamSaver} from '../utils/download';
 import {UploadFormItem} from './UploadFormItem';
 import {UploadFile} from 'antd/lib/upload/interface';

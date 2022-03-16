@@ -2,7 +2,6 @@ import React from 'react';
 import {EyeTwoTone, EyeInvisibleOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {Form, Input, message, Modal, Tooltip} from 'antd';
 import {genKeySharesFromPassword} from '../services/keygen';
-import {DataverseSourceParams} from '../types/dataverseSourceParams';
 import {displayError} from '../utils/error';
 import {stringsToFiles} from '../utils/file';
 import forge from 'node-forge';
@@ -15,7 +14,6 @@ interface RegenKeySharesFormValues {
 }
 
 interface RegenKeySharesModalProps {
-    sourceParams: DataverseSourceParams
     fileName: string
     salt: string
     visible: boolean

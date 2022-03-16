@@ -3,7 +3,7 @@ import {Col, Form, Input, message, Modal, Row, Switch, Tooltip} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone, InfoCircleOutlined} from '@ant-design/icons';
 import {UploadFile} from 'antd/es/upload/interface';
 import {addFilesToDataset} from '../web/dataverse';
-import {DataverseSourceParams} from '../types/dataverseSourceParams';
+import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
 import {encryptWithPasswordToBuf} from '../services/keygen';
 import {DGFile} from '../types/verificationDetails';
@@ -16,7 +16,7 @@ import {zipFiles} from '../utils/zip';
 import {downloadViaATag} from '../utils/download';
 
 interface UploadFileModalProps {
-    sourceParams: DataverseSourceParams
+    dvParams: DataverseParams
     visible: boolean
     setVisible: (isVisible: boolean) => void
     callbackFn: () => void
@@ -30,14 +30,14 @@ interface UploadFormValues {
 
 export const UploadFileModal = (props: UploadFileModalProps) => {
     const [form] = Form.useForm();
-    const {sourceParams, visible, setVisible, callbackFn} = props;
+    const {dvParams, visible, setVisible, callbackFn} = props;
     const [isUploading, setIsUploading] = useState(false);
     const [uploadErrorMsg, setUploadErrorMsg] = useState('');
 
     const onModalOk = () => {
         setIsUploading(true);
         form.validateFields()
-            .then(async (v: UploadFormValues) => saveFiles(sourceParams,
+            .then(async (v: UploadFormValues) => saveFiles(dvParams,
                 getUploadedFilesData(v.fileList), v.password, v.genSplitKeys))
             .then(() => message.success('Successfully uploaded all files.'))
             .then(() => form.resetFields())
@@ -116,7 +116,7 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
 };
 
 const saveFiles = async (
-    sourceParams: DataverseSourceParams,
+    dvParams: DataverseParams,
     files: File[],
     password: string,
     splitKeys: boolean): Promise<void> => {
@@ -145,7 +145,7 @@ const saveFiles = async (
         allKeyShareFiles.push(...genKeyShareFiles(keyShareBase64Strs, file.name));
     }
 
-    const datasetFiles = await addFilesToDataset(sourceParams, encryptedFiles);
+    const datasetFiles = await addFilesToDataset(dvParams, encryptedFiles);
     const dgFiles: DGFile[] = datasetFiles.map((datasetFile, idx) => {
         return {
             id: datasetFile.dataFile.id,

@@ -1,21 +1,26 @@
 import {md, util} from 'node-forge';
 
-self.onmessage = (e: MessageEvent<ArrayBuffer[]>) => {
-    const dataBinBufs = e.data;
-    const hashes: string[] = [];
-    for (let idx = 0; idx < dataBinBufs.length; idx++) {
-        const dataBinBuf = dataBinBufs[idx];
-        const chunkSize = 64 * 1024;
-        const hasher = md.sha512.create();
-        for (let i = 0; i < dataBinBuf.byteLength; i+=chunkSize) {
-            console.log('Hashing buffer ...');
-            const chunkBinBuf = dataBinBuf.slice(i, i + chunkSize);
-            const chunkBinStr = new TextDecoder().decode(chunkBinBuf);
-            hasher.update(chunkBinStr);
+let state: md.MessageDigest[] = [];
+
+self.onmessage = (e: MessageEvent<any[]>) => {
+    const body = e.data;
+    if (body[0] === 'START') {
+        state = []; // Clear state in case of faults
+        const length = body[1];
+        for (let i = 0; i < length; i++) {
+            state.push(md.sha512.create());
         }
-        // Fixed size so safe to store as string
-        hashes.push(util.encode64(hasher.digest().getBytes()));
+    } if (body[0] === 'CHUNK') {
+        const itemIdx: number = body[1];
+        const data: string = body[2];
+        state[itemIdx].update(data);
+    } else if (body[0] === 'END') {
+        const hashes: string[] = [];
+        for (let i = 0; i < state.length; i++) {
+            hashes.push(util.encode64(state[i].digest().getBytes()));
+        };
+        self.postMessage(hashes);
+        state = []; // Clear state
     }
-    self.postMessage(hashes);
 };
 

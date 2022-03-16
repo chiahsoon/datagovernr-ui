@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {Col, Form, Input, message, Modal, Row, Tabs, Typography} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone} from '@ant-design/icons';
-import {DataverseSourceParams} from '../types/dataverseSourceParams';
+import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
 import {decryptWithPasswordToStream, decryptWithSharesToStream} from '../services/keygen';
 import {downloadViaStreamSaver} from '../utils/download';
@@ -13,7 +13,7 @@ const {TabPane} = Tabs;
 const {Text} = Typography;
 
 interface DownloadFileModalProps {
-    sourceParams: DataverseSourceParams
+    dvParams: DataverseParams
     fileId: number
     fileName: string
     salt: string
@@ -33,7 +33,7 @@ enum DecryptionType {
 
 export const DownloadFileModal = (props: DownloadFileModalProps) => {
     const [form] = Form.useForm();
-    const {sourceParams, fileId, fileName, salt, visible, setVisible} = props;
+    const {dvParams, fileId, fileName, salt, visible, setVisible} = props;
     const [isDownloading, setIsDownloading] = useState(false);
     const [decryptionType, setDecryptionType] = useState(DecryptionType.Password);
     const [uploadErrorMsg, setUploadErrorMsg] = useState('');
@@ -42,8 +42,8 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
         setIsDownloading(true);
         form.validateFields()
             .then((v: DownloadFormValues) => decryptionType === DecryptionType.Password ?
-                passwordDecryptDownload(sourceParams, fileId, fileName, salt, v.password) :
-                keyShareFilesDecryptDownload(sourceParams, fileId, fileName, v.keyShareFiles))
+                passwordDecryptDownload(dvParams, fileId, fileName, salt, v.password) :
+                keyShareFilesDecryptDownload(dvParams, fileId, fileName, v.keyShareFiles))
             .then(() => message.success('Successfully downloaded file.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))
@@ -112,18 +112,18 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
 };
 
 const passwordDecryptDownload = async (
-    sourceParams: DataverseSourceParams,
+    dvParams: DataverseParams,
     fileId: number,
     fileName: string,
     saltBase64: string,
     password: string): Promise<void> => {
-    const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
+    const ciphertextBinaryBuf = await downloadFile(dvParams, fileId);
     const decryptedStream = await decryptWithPasswordToStream(ciphertextBinaryBuf, password, saltBase64);
     downloadViaStreamSaver(fileName, decryptedStream.pipeThrough(new TextDecoderStream()));
 };
 
 const keyShareFilesDecryptDownload = async (
-    sourceParams: DataverseSourceParams,
+    dvParams: DataverseParams,
     fileId: number,
     fileName: string,
     keyShareFiles: UploadFile[]): Promise<void> => {
@@ -133,7 +133,7 @@ const keyShareFilesDecryptDownload = async (
     });
     const keyShareStrings = await Promise.all(fileToStringPromises);
 
-    const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
+    const ciphertextBinaryBuf = await downloadFile(dvParams, fileId);
     const decryptedStream = await decryptWithSharesToStream(ciphertextBinaryBuf, keyShareStrings);
     await downloadViaStreamSaver(fileName, decryptedStream.pipeThrough(new TextDecoderStream()));
 };

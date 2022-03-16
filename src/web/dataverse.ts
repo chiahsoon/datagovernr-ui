@@ -1,15 +1,15 @@
 import {DatasetFile} from '../types/datasetFile';
-import {DataverseSourceParams} from '../types/dataverseSourceParams';
+import {DataverseParams} from '../types/dataverseParams';
 import {Dataset} from '../types/dataset';
 import {checkFilesExistence} from './api';
 import {streamToArr} from '../utils/streams';
 import {zipFilesStream} from '../utils/zip';
 
-export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams): Promise<Dataset> => {
-    const {siteUrl, datasetId} = sourceParams;
+export const getLatestDatasetInfo = async (dvParams: DataverseParams): Promise<Dataset> => {
+    const {siteUrl, datasetId} = dvParams;
     const url = `${siteUrl}/api/datasets/${datasetId}/versions/:latest`;
     const resp = await fetch(url, {
-        headers: {'X-Dataverse-key': sourceParams.apiToken}, // Compulsory to retrieve draft
+        headers: {'X-Dataverse-key': dvParams.apiToken}, // Compulsory to retrieve draft
     });
     const jsonData = await resp.json();
     const dataset: Dataset = jsonData.data;
@@ -32,7 +32,7 @@ export const getLatestDatasetInfo = async (sourceParams: DataverseSourceParams):
 };
 
 export const addFilesToDataset = async (
-    sourceParams: DataverseSourceParams,
+    dvParams: DataverseParams,
     files: File[]): Promise<DatasetFile[]> => {
     const zipStream = await zipFilesStream(files);
     const zippedBlobParts: BlobPart[] = await streamToArr(zipStream);
@@ -41,20 +41,20 @@ export const addFilesToDataset = async (
     // TODO: Add formData['jsonData'] i.e. metadata if necessary
     const formData = new FormData();
     formData.append('file', zipFile);
-    const url = `${sourceParams.siteUrl}/api/datasets/${sourceParams.datasetId}/add`;
+    const url = `${dvParams.siteUrl}/api/datasets/${dvParams.datasetId}/add`;
     const respData = await fetch(url, {
         method: 'POST',
         body: formData,
-        headers: {'X-Dataverse-key': sourceParams.apiToken},
+        headers: {'X-Dataverse-key': dvParams.apiToken},
     });
     const jsonData = await respData.json();
     const empty: DatasetFile[] = [];
     return empty.concat(jsonData.data.files);
 };
 
-export const downloadFile = async (sourceParams: DataverseSourceParams, fileId: number): Promise<ArrayBuffer> => {
-    let url = `${sourceParams.siteUrl}/api/access/datafile/${fileId}?format=original`;
-    if (sourceParams.apiToken != null) url += `&key=${sourceParams.apiToken}`;
+export const downloadFile = async (dvParams: DataverseParams, fileId: number): Promise<ArrayBuffer> => {
+    let url = `${dvParams.siteUrl}/api/access/datafile/${fileId}?format=original`;
+    if (dvParams.apiToken != null) url += `&key=${dvParams.apiToken}`;
     const resp = await fetch(url);
     const data = await resp.blob();
     return await data.arrayBuffer();

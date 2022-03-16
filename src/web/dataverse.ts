@@ -2,8 +2,8 @@ import {DatasetFile} from '../types/datasetFile';
 import {DataverseParams} from '../types/dataverseParams';
 import {Dataset} from '../types/dataset';
 import {checkFilesExistence} from './api';
-import {streamToArr} from '../utils/stream';
-import {zipFilesStream} from '../utils/zip';
+import {createStream, streamToArr} from '../utils/stream';
+import {zipStreams} from '../utils/zip';
 
 export const getLatestDatasetInfo = async (dvParams: DataverseParams): Promise<Dataset> => {
     const {siteUrl, datasetId} = dvParams;
@@ -33,14 +33,13 @@ export const getLatestDatasetInfo = async (dvParams: DataverseParams): Promise<D
 
 export const addFilesToDataset = async (
     dvParams: DataverseParams,
-    files: File[]): Promise<DatasetFile[]> => {
-    const zipStream = await zipFilesStream(files);
-    const zippedBlobParts: BlobPart[] = await streamToArr(zipStream);
-    const zipFile = new File(zippedBlobParts, 'data.zip');
-
-    // TODO: Add formData['jsonData'] i.e. metadata if necessary
+    streams: ReadableStream[],
+    filenames: string[]): Promise<DatasetFile[]> => {
+    const zipStream = createStream();
+    await zipStreams(streams, filenames, zipStream.writable);
+    const zippedBlobParts: BlobPart[] = await streamToArr(zipStream.readable);
     const formData = new FormData();
-    formData.append('file', zipFile);
+    formData.append('file', new File(zippedBlobParts, 'data.zip'));
     const url = `${dvParams.siteUrl}/api/datasets/${dvParams.datasetId}/add`;
     const respData = await fetch(url, {
         method: 'POST',
@@ -52,10 +51,9 @@ export const addFilesToDataset = async (
     return empty.concat(jsonData.data.files);
 };
 
-export const downloadFile = async (dvParams: DataverseParams, fileId: number): Promise<ArrayBuffer> => {
+export const downloadFile = async (dvParams: DataverseParams, fileId: number): Promise<Blob> => {
     let url = `${dvParams.siteUrl}/api/access/datafile/${fileId}?format=original`;
     if (dvParams.apiToken != null) url += `&key=${dvParams.apiToken}`;
     const resp = await fetch(url);
-    const data = await resp.blob();
-    return await data.arrayBuffer();
+    return await resp.blob();
 };

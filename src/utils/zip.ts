@@ -1,5 +1,4 @@
 import {zipSync, Zip, ZipDeflate} from 'fflate';
-import {createStream} from './stream';
 
 export const zipFiles = async (files: File[], zipFileName: string): Promise<File> => {
     const zipObj: {[name: string]: Uint8Array} = {};
@@ -13,33 +12,32 @@ export const zipFiles = async (files: File[], zipFileName: string): Promise<File
     return zipFile;
 };
 
-export const zipFilesStream = async (files: File[]): Promise<ReadableStream> => {
-    const result = createStream();
-    const resultWriter = result.writable.getWriter();
-
-    const chunkSize = 64 * 1024;
-    const arrBufsWithFileNames: [ArrayBuffer, string][] = await Promise.all(files.map(async (file) => {
-        return [await file.arrayBuffer(), file.name];
-    }));
-
+export const zipStreams = async (streams: ReadableStream[], filenames: string[], out: WritableStream) => {
+    const start = Date.now();
+    const resultWriter = out.getWriter();
     const zip = new Zip((err, dat, final) => {
         if (err) throw Error('failed to zip');
-        console.log('Zipping ...');
         resultWriter.write(dat);
         if (final) resultWriter.close();
     });
 
-    for (const arrBufWithFileName of arrBufsWithFileNames) {
-        const [arrBuf, filename] = arrBufWithFileName;
-        const zipFile = new ZipDeflate(filename); // Consider different compression options
+    for (let streamIdx = 0; streamIdx < streams.length; streamIdx ++) {
+        const stream = streams[streamIdx];
+        const filename = filenames[streamIdx];
+        const reader = stream.getReader();
+        const zipFile = new ZipDeflate(filename);
         zip.add(zipFile);
-        for (let i = 0; i < arrBuf.byteLength; i+=chunkSize) {
-            const chunkU8 = new Uint8Array(arrBuf.slice(i, i + chunkSize));
-            const isFinal = i + chunkSize >= arrBuf.byteLength;
-            zipFile.push(chunkU8, isFinal);
-        }
+        let chunk = await reader.read();
+        while (true) {
+            const nextChunk = await reader.read();
+            const isFinal = nextChunk.done;
+            zipFile.push(chunk.value, isFinal);
+            if (isFinal) break;
+            chunk = nextChunk;
+        };
     }
 
     zip.end();
-    return result.readable;
+    console.log(`Zipping completed in ${(Date.now() - start) / 1000}s`);
 };
+

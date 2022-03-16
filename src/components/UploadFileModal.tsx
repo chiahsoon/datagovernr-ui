@@ -5,15 +5,16 @@ import {UploadFile} from 'antd/es/upload/interface';
 import {addFilesToDataset} from '../web/dataverse';
 import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
-import {encryptWithPasswordToBuf} from '../services/password';
+import {encryptWithPasswordToStream} from '../services/password';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
 import {getUploadedFilesData, stringsToFiles} from '../utils/file';
 import {UploadFormItem} from './UploadFormItem';
 import {filenameToKeyShareName} from '../utils/common';
-import {md, util} from 'node-forge';
 import {zipFiles} from '../utils/zip';
 import {downloadViaATag} from '../utils/download';
+import {hashFilesWithWorkers, hashStreamsWithWorkers} from '../utils/worker';
+import {createStream} from '../utils/stream';
 
 interface UploadFileModalProps {
     dvParams: DataverseParams
@@ -120,42 +121,39 @@ const upload = async (
     files: File[],
     password: string,
     splitKeys: boolean): Promise<void> => {
-    const beforeSaving = Date.now();
-
+    const start = Date.now();
     const saltsBase64: string[] = []; // To send to api
-    const plaintextBufs: ArrayBuffer[] = []; // To SHA-512, encode64 then send to api
-    const encryptedBufs: ArrayBuffer[] = []; // To SHA-512, encode64 then send to api
-    const encryptedFiles: File[] = []; // To send to dataverse
+    const encryptedStreams: TransformStream[] = []; // To send to dataverse
     const allKeyShareFiles: File[] = []; // To download
 
-    for (const file of files) {
-        const fileBuf = await file.arrayBuffer();
-        plaintextBufs.push(fileBuf);
-
+    for (let i = 0; i < files.length; i++) encryptedStreams.push(createStream());
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const encryptedStream = encryptedStreams[i];
         const keyShareBase64Strs: string[] = []; // To write split keys into
-        const [encryptedBuf, saltBase64] = await encryptWithPasswordToBuf(
-            fileBuf, password, splitKeys ? keyShareBase64Strs : undefined);
+        const saltBase64 = encryptWithPasswordToStream(
+            file, password, encryptedStream.writable, splitKeys ? keyShareBase64Strs : undefined);
         saltsBase64.push(saltBase64);
-
-        encryptedBufs.push(encryptedBuf);
-        encryptedFiles.push(new File([encryptedBuf], file.name));
+        encryptedStreams.push(encryptedStream);
 
         // Convert split keys into appropriately named files
         if (!splitKeys) continue;
         allKeyShareFiles.push(...genKeyShareFiles(keyShareBase64Strs, file.name));
     }
 
-    const [datasetFiles, plaintextHashes, encryptedHashes] = await Promise.all([
-        addFilesToDataset(dvParams, encryptedFiles),
-        hashBufs(plaintextBufs),
-        hashBufs(encryptedBufs),
-    ]);
+    const toHashStreams: ReadableStream[] = [];
+    const toStoreStreams: ReadableStream[] = [];
+    for (let i = 0; i < files.length; i++) {
+        const [toHash, toStore] = encryptedStreams[i].readable.tee();
+        toHashStreams.push(toHash);
+        toStoreStreams.push(toStore);
+    }
 
-    // // This will lead to memory problems; need to fix
-    // const [datasetFiles, [plaintextHashes, encryptedHashes]] = await Promise.all([
-    //     addFilesToDataset(dvParams, encryptedFiles),
-    //     hashOnWorker(plaintextBufs, encryptedBufs),
-    // ]);
+    const [datasetFiles, plaintextHashes, encryptedHashes] = await Promise.all([
+        addFilesToDataset(dvParams, toHashStreams, files.map((f) => f.name)),
+        hashFilesWithWorkers(files),
+        hashStreamsWithWorkers(toStoreStreams),
+    ]);
 
     const dgFiles: DGFile[] = datasetFiles.map((datasetFile, idx) => {
         return {
@@ -166,13 +164,13 @@ const upload = async (
         };
     });
     await saveFilesToDG(dgFiles);
+    console.log(`Upload completed in ${(Date.now() - start) / 1000}s`);
 
     // Let user download split keys as a zip
     if (!splitKeys) return;
     const keysFilename = 'keys.zip';
     const zipFile = await zipFiles(allKeyShareFiles, keysFilename);
     downloadViaATag(keysFilename, zipFile);
-    console.log('Save Files Time Taken: ', (Date.now() - beforeSaving) / 1000);
 };
 
 const genKeyShareFiles = (keyShares: string[], filename: string): File[] => {
@@ -182,32 +180,3 @@ const genKeyShareFiles = (keyShares: string[], filename: string): File[] => {
     });
     return stringsToFiles(data);
 };
-
-const hashBufs = (binBufs: ArrayBuffer[]): string[] => {
-    const res: string[] = [];
-    for (let idx = 0; idx < binBufs.length; idx += 1) {
-        const binBuf = binBufs[idx];
-        const chunkSize = 64 * 1024;
-        const hasher = md.sha512.create();
-        for (let i = 0; i < binBuf.byteLength; i+=chunkSize) {
-            console.log('Hashing buffer ...');
-            const chunkBinBuf = binBuf.slice(i, i + chunkSize);
-            const chunkBinStr = new TextDecoder().decode(chunkBinBuf);
-            hasher.update(chunkBinStr);
-        }
-        // Fixed size so safe to store as string
-        res.push(util.encode64(hasher.digest().getBytes()));
-    }
-    return res;
-};
-
-// // Hash via web workers
-// const hashOnWorker = async (
-//     plaintextBufs: ArrayBuffer[],
-//     encryptedBufs: ArrayBuffer[]): Promise<[string[], string[]]> => {
-//     const data = [...plaintextBufs, ...encryptedBufs];
-//     const hashes = await hashBufsWithWorkers(data);
-//     const plaintextHashes = hashes.slice(0, plaintextBufs.length);
-//     const encryptedHashes = hashes.slice(plaintextBufs.length);
-//     return [plaintextHashes, encryptedHashes];
-// };

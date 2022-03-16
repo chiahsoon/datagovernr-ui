@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import forge from 'node-forge';
-import {bufToDecodedStream, CHUNK_SIZE, createStream} from '../../utils/stream';
+import {CHUNK_SIZE, createStream, blobToDecodedStream} from '../../utils/stream';
 import {FileEncryptionInstance} from '../encryption';
 
 export class AES256GCMInstance implements FileEncryptionInstance {
@@ -54,9 +54,9 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         return ivBinary + cipherTextBinary + tagBinary;
     }
 
-    async encryptFileToStream(dataBinaryBuf: ArrayBuffer): Promise<ReadableStream<string>> {
-        const result = createStream();
-        const writer = result.writable.getWriter();
+    async encryptFileToStream(file: File, out: WritableStream<Uint8Array>) {
+        const start = Date.now();
+        const writer = out.getWriter();
         const ivBinary = this.generateNewNonce();
         writer.write(new TextEncoder().encode(ivBinary));
 
@@ -68,12 +68,11 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
         });
         // Encrypt the plaintext
-        for (let idx = 0; idx < dataBinaryBuf.byteLength; idx += CHUNK_SIZE) {
-            const chunk = dataBinaryBuf.slice(idx, idx + CHUNK_SIZE);
+        for (let idx = 0; idx < file.size; idx += CHUNK_SIZE) {
+            const chunk = await file.slice(idx, idx + CHUNK_SIZE).arrayBuffer();
             cipher.update(forge.util.createBuffer(chunk));
             const encryptedChunk = cipher.output.getBytes();
             writer.write(new TextEncoder().encode(encryptedChunk));
-            console.log('Encrypting stream ...');
         }
         cipher.finish();
 
@@ -81,7 +80,7 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         const tagBinary = cipher.mode.tag.getBytes();
         writer.write(new TextEncoder().encode(tagBinary));
         writer.close();
-        return result.readable;
+        console.log(`Encryption completed in ${(Date.now() - start) / 1000}s`);
     }
 
     decryptFile(dataBinaryBuf: ArrayBuffer): string {
@@ -117,32 +116,32 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         return decryptedStr;
     }
 
-    async decryptFileToStream(dataBinaryBuf: ArrayBuffer): Promise<ReadableStream<string>> {
+    async decryptFileToStream(blob: Blob): Promise<ReadableStream<string>> {
         const result = createStream();
         const writer = result.writable.getWriter();
         let [ivBinary, tagBinary] = ['', ''];
-        let [ivIdx, tagIdx] = [0, dataBinaryBuf.byteLength - 1];
+        let [ivIdx, tagIdx] = [0, blob.size - 1];
 
-        while (ivIdx < dataBinaryBuf.byteLength) {
-            const ivBinaryBuf = dataBinaryBuf.slice(0, ivIdx + 1);
+        while (ivIdx < blob.size) {
+            const ivBinaryBuf = await blob.slice(0, ivIdx + 1).arrayBuffer();
             if (new TextDecoder().decode(ivBinaryBuf).length > AES256GCMInstance.IV_LENGTH) break;
-            ivBinary = new TextDecoder().decode(dataBinaryBuf.slice(0, ivIdx + 1));
+            ivBinary = new TextDecoder().decode(ivBinaryBuf);
             ivIdx += 1;
         }
 
         while (tagIdx >= 0) {
-            const tagBinaryBuf = dataBinaryBuf.slice(tagIdx, dataBinaryBuf.byteLength);
+            const tagBinaryBuf = await blob.slice(tagIdx, blob.size).arrayBuffer();
             if (new TextDecoder().decode(tagBinaryBuf).length > AES256GCMInstance.TAG_LENGTH) break;
             tagBinary = new TextDecoder().decode(tagBinaryBuf);
             tagIdx -= 1;
         }
 
         // ivIdx = first data byte, tagIdx = last data byte (exclusive, so +1)
-        const ciphertextBuf = dataBinaryBuf.slice(ivIdx, tagIdx+1);
+        const ciphertextBuf = blob.slice(ivIdx, tagIdx+1);
         const ivBsb = forge.util.createBuffer(ivBinary);
         const tagBsb = forge.util.createBuffer(tagBinary);
 
-        const decodedStream = await bufToDecodedStream(ciphertextBuf);
+        const decodedStream = await blobToDecodedStream(ciphertextBuf);
         const decodedReader = decodedStream.getReader();
 
         // Instantiate the cipher

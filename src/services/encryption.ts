@@ -2,10 +2,10 @@ import {AES256GCMInstance} from './encryption/aes256gcm';
 
 export interface FileEncryptionInstance {
     getKey(): string;
-    encryptFile(dataBinaryBuf: ArrayBuffer): string;
-    encryptFileToStream(dataBinaryBuf: ArrayBuffer): Promise<ReadableStream<string>>;
+    encryptFile(file: ArrayBuffer): string;
+    encryptFileToStream(file: File, out: WritableStream<Uint8Array>): void;
     decryptFile(dataBinaryBuf: ArrayBuffer): string;
-    decryptFileToStream(dataBinaryBuf: ArrayBuffer): Promise<ReadableStream<string>>;
+    decryptFileToStream(blob: Blob): Promise<ReadableStream<string>>;
 }
 
 export enum FileEncryptionScheme {

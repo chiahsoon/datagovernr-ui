@@ -117,8 +117,8 @@ const passwordDecryptDownload = async (
     fileName: string,
     saltBase64: string,
     password: string): Promise<void> => {
-    const ciphertextBinaryBuf = await downloadFile(dvParams, fileId);
-    const decryptedStream = await decryptWithPasswordToStream(ciphertextBinaryBuf, password, saltBase64);
+    const ciphertextBinaryBlob = await downloadFile(dvParams, fileId);
+    const decryptedStream = await decryptWithPasswordToStream(ciphertextBinaryBlob, password, saltBase64);
     downloadViaStreamSaver(fileName, decryptedStream.pipeThrough(new TextDecoderStream()));
 };
 
@@ -133,7 +133,7 @@ const keyShareFilesDecryptDownload = async (
     });
     const keyShareStrings = await Promise.all(fileToStringPromises);
 
-    const ciphertextBinaryBuf = await downloadFile(dvParams, fileId);
-    const decryptedStream = await decryptWithSharesToStream(ciphertextBinaryBuf, keyShareStrings);
+    const ciphertextBinaryBlob = await downloadFile(dvParams, fileId);
+    const decryptedStream = await decryptWithSharesToStream(ciphertextBinaryBlob, keyShareStrings);
     await downloadViaStreamSaver(fileName, decryptedStream.pipeThrough(new TextDecoderStream()));
 };

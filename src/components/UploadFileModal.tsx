@@ -122,37 +122,33 @@ const upload = async (
     password: string,
     splitKeys: boolean): Promise<void> => {
     const start = Date.now();
-    const saltsB64: string[] = []; // To send to api
-    const encryptedStreams: TransformStream[] = []; // To send to dataverse
+    const saltsB64: string[] = []; // encode64 send to api
+    const encryptedToHashStreams: ReadableStream[] = []; // Hash & encode64 send to api
+    const encryptedToStoreStreams: ReadableStream[] = []; // Send to dataverse
     const allKeyShareFiles: File[] = []; // To download
 
-    for (let i = 0; i < files.length; i++) encryptedStreams.push(createStream());
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const encryptedStream = encryptedStreams[i];
+        const encryptedStream = createStream();
+
         const keyShareB64Arr: string[] = []; // To write split keys into
         const saltB64 = encryptWithPasswordToStream(
             file, password, encryptedStream.writable, splitKeys ? keyShareB64Arr : undefined);
         saltsB64.push(saltB64);
-        encryptedStreams.push(encryptedStream);
+
+        const [encryptedToHashStream, encryptedToStoreStream] = encryptedStream.readable.tee();
+        encryptedToHashStreams.push(encryptedToHashStream);
+        encryptedToStoreStreams.push(encryptedToStoreStream);
 
         // Convert split keys into appropriately named files
         if (!splitKeys) continue;
         allKeyShareFiles.push(...genKeyShareFiles(keyShareB64Arr, file.name));
     }
 
-    const toHashStreams: ReadableStream[] = [];
-    const toStoreStreams: ReadableStream[] = [];
-    for (let i = 0; i < files.length; i++) {
-        const [toHash, toStore] = encryptedStreams[i].readable.tee();
-        toHashStreams.push(toHash);
-        toStoreStreams.push(toStore);
-    }
-
     const [datasetFiles, plaintextHashes, encryptedHashes] = await Promise.all([
-        addFilesToDvDataset(dvParams, toHashStreams, files.map((f) => f.name)),
+        addFilesToDvDataset(dvParams, encryptedToStoreStreams, files.map((f) => f.name)),
         hashFilesWithWorkers(files),
-        hashStreamsWithWorkers(toStoreStreams),
+        hashStreamsWithWorkers(encryptedToHashStreams),
     ]);
 
     const dgFiles: DGFile[] = datasetFiles.map((datasetFile, idx) => {

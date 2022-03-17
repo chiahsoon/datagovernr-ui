@@ -43,12 +43,14 @@ export const addFilesToDvDataset = async (
     const formData = new FormData();
     formData.append('file', zipFile);
     const url = `${dvParams.siteUrl}/api/datasets/${dvParams.datasetId}/add`;
+    const start = Date.now();
     const respData = await fetch(url, {
         method: 'POST',
         body: formData,
         headers: {'X-Dataverse-key': dvParams.apiToken},
     });
     const jsonData = await respData.json();
+    console.log(`Upload completed in ${(Date.now() - start) / 1000}s`);
     const empty: DatasetFile[] = [];
     return empty.concat(jsonData.data.files);
 };

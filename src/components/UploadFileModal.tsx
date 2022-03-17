@@ -121,7 +121,6 @@ const upload = async (
     files: File[],
     password: string,
     splitKeys: boolean): Promise<void> => {
-    const start = Date.now();
     const saltsB64: string[] = []; // encode64 send to api
     const encryptedToHashStreams: ReadableStream[] = []; // Hash & encode64 send to api
     const encryptedToStoreStreams: ReadableStream[] = []; // Send to dataverse
@@ -160,7 +159,6 @@ const upload = async (
         };
     });
     await saveFilesToDG(dgFiles);
-    console.log(`Upload completed in ${(Date.now() - start) / 1000}s`);
 
     // Let user download split keys as a zip
     if (!splitKeys) return;

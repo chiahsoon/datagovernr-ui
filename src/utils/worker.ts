@@ -1,9 +1,11 @@
 import {CHUNK_SIZE} from './stream';
 
 export const hashFilesWithWorkers = (files: File[]): Promise<string[]> => {
+    const start = Date.now();
     const worker = new Worker(new URL('../workers/hash.ts', import.meta.url));
     return new Promise(async (resolve) => {
         worker.onmessage = (e) => {
+            console.log(`File Hashing completed in ${(Date.now() - start) / 1000}s`);
             const hashes: string[] = e.data;
             resolve(hashes);
             worker.terminate();
@@ -21,9 +23,11 @@ export const hashFilesWithWorkers = (files: File[]): Promise<string[]> => {
 };
 
 export const hashStreamsWithWorkers = (streams: ReadableStream[]): Promise<string[]> => {
+    const start = Date.now();
     const worker = new Worker(new URL('../workers/hash.ts', import.meta.url));
     return new Promise(async (resolve) => {
         worker.onmessage = (e) => {
+            console.log(`Stream Hashing completed in ${(Date.now() - start) / 1000}s`);
             const hashes: string[] = e.data;
             resolve(hashes);
             worker.terminate();

@@ -52,8 +52,11 @@ export const addFilesToDataset = async (
 };
 
 export const downloadFile = async (dvParams: DataverseParams, fileId: number): Promise<Blob> => {
+    const start = Date.now();
     let url = `${dvParams.siteUrl}/api/access/datafile/${fileId}?format=original`;
     if (dvParams.apiToken != null) url += `&key=${dvParams.apiToken}`;
     const resp = await fetch(url);
-    return await resp.blob();
+    const blob = await resp.blob();
+    console.log(`File download completed in: ${(Date.now() - start) / 1000}s`);
+    return blob;
 };

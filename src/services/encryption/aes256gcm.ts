@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
 import forge from 'node-forge';
-import {CHUNK_SIZE, createStream, blobToDecodedStream} from '../../utils/stream';
+import {CHUNK_SIZE, createStream, blobToStream} from '../../utils/stream';
 import {FileEncryptionInstance} from '../encryption';
 
 export class AES256GCMInstance implements FileEncryptionInstance {
@@ -116,9 +116,9 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         return decryptedStr;
     }
 
-    async decryptFileToStream(blob: Blob): Promise<ReadableStream<string>> {
-        const result = createStream();
-        const writer = result.writable.getWriter();
+    async decryptFileToStream(blob: Blob, out: WritableStream) {
+        const start = Date.now();
+        const writer = out.getWriter();
         let [ivBinary, tagBinary] = ['', ''];
         let [ivIdx, tagIdx] = [0, blob.size - 1];
 
@@ -137,12 +137,14 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         }
 
         // ivIdx = first data byte, tagIdx = last data byte (exclusive, so +1)
-        const ciphertextBuf = blob.slice(ivIdx, tagIdx+1);
         const ivBsb = forge.util.createBuffer(ivBinary);
         const tagBsb = forge.util.createBuffer(tagBinary);
+        const ciphertextBlob = blob.slice(ivIdx, tagIdx+1);
 
-        const decodedStream = await blobToDecodedStream(ciphertextBuf);
-        const decodedReader = decodedStream.getReader();
+        // Decode buffer bytes to UTF-8
+        const decodedStream = createStream();
+        blobToStream(ciphertextBlob, decodedStream.writable); // Do not await
+        const decodedReader = decodedStream.readable.pipeThrough(new TextDecoderStream()).getReader();
 
         // Instantiate the cipher
         const decipher = forge.cipher.createDecipher('AES-GCM', this.key);
@@ -155,14 +157,13 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         for (let chunk = await decodedReader.read(); !chunk.done; chunk = await decodedReader.read()) {
             decipher.update(forge.util.createBuffer(chunk.value));
             const decryptedChunk = decipher.output.getBytes();
-            writer.write(new TextEncoder().encode(decryptedChunk));
-            console.log('Decrypting ...');
+            writer.write(decryptedChunk);
         }
 
         if (!decipher.finish()) throw new Error('Decryption Error');
-        writer.write(new TextEncoder().encode(decipher.output.getBytes()));
+        writer.write(decipher.output.getBytes());
         writer.close();
-        return result.readable;
+        console.log(`Decryption completed in ${(Date.now() - start) / 1000}s`);
     }
 
     isValidKey(key: string):boolean {

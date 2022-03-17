@@ -33,10 +33,11 @@ export const genKeySharesFromPassword = (password:string, saltBase64: string): s
     return splitKey(key);
 };
 
-export const decryptWithPasswordToStream = async (
+export const decryptWithPasswordToStream = (
     blob: Blob,
     password: string,
-    saltBase64: string): Promise<ReadableStream> => {
+    saltBase64: string,
+    out: WritableStream) => {
     // saltBase64 is a string that stores the salt in base64 format
     const saltBinary = util.decode64(saltBase64);
     const keyBinary = generateKey(password, saltBinary,
@@ -44,12 +45,13 @@ export const decryptWithPasswordToStream = async (
     const decipher = FileEncryptionService.createEncryptionInstance(
         FileEncryptionScheme.AES256GCM,
         keyBinary);
-    return await decipher.decryptFileToStream(blob);
+    decipher.decryptFileToStream(blob, out);
 };
 
 export const decryptWithSharesToStream = async (
     blob: Blob,
-    shareBase64Arr: string[]): Promise<ReadableStream> => {
+    shareBase64Arr: string[],
+    out: WritableStream) => {
     // the shares of the key are stored as base64 strings
     const shareBinaryArr = [];
     for (let i=0; i<shareBase64Arr.length; i++) {
@@ -59,5 +61,5 @@ export const decryptWithSharesToStream = async (
     const decipher = FileEncryptionService.createEncryptionInstance(
         FileEncryptionScheme.AES256GCM,
         keyBinary);
-    return await decipher.decryptFileToStream(blob);
+    decipher.decryptFileToStream(blob, out);
 };

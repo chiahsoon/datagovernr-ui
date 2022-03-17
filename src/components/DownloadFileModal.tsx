@@ -8,6 +8,7 @@ import {downloadViaStreamSaver} from '../utils/download';
 import {UploadFormItem} from './UploadFormItem';
 import {UploadFile} from 'antd/lib/upload/interface';
 import {downloadFile} from '../web/dataverse';
+import {createStream} from '../utils/stream';
 
 const {TabPane} = Tabs;
 const {Text} = Typography;
@@ -118,8 +119,9 @@ const passwordDecryptDownload = async (
     saltBase64: string,
     password: string): Promise<void> => {
     const ciphertextBinaryBlob = await downloadFile(dvParams, fileId);
-    const decryptedStream = await decryptWithPasswordToStream(ciphertextBinaryBlob, password, saltBase64);
-    downloadViaStreamSaver(fileName, decryptedStream.pipeThrough(new TextDecoderStream()));
+    const decryptedStream = createStream();
+    decryptWithPasswordToStream(ciphertextBinaryBlob, password, saltBase64, decryptedStream.writable);
+    downloadViaStreamSaver(fileName, decryptedStream.readable);
 };
 
 const keyShareFilesDecryptDownload = async (
@@ -134,6 +136,7 @@ const keyShareFilesDecryptDownload = async (
     const keyShareStrings = await Promise.all(fileToStringPromises);
 
     const ciphertextBinaryBlob = await downloadFile(dvParams, fileId);
-    const decryptedStream = await decryptWithSharesToStream(ciphertextBinaryBlob, keyShareStrings);
-    await downloadViaStreamSaver(fileName, decryptedStream.pipeThrough(new TextDecoderStream()));
+    const decryptedStream = createStream();
+    decryptWithSharesToStream(ciphertextBinaryBlob, keyShareStrings, decryptedStream.writable);
+    await downloadViaStreamSaver(fileName, decryptedStream.readable.pipeThrough(new TextDecoderStream()));
 };

@@ -15,6 +15,7 @@ export const downloadViaATag = (fileName: string, data: Blob) => {
 
 export const downloadViaStreamSaver = async (fileName: string, readableStream: ReadableStream) => {
     // Stream should already a decoded string
+    const start = Date.now();
     const reader = readableStream.getReader();
     const fileStream = streamSaver.createWriteStream(fileName);
     const writer = fileStream.getWriter();
@@ -23,4 +24,5 @@ export const downloadViaStreamSaver = async (fileName: string, readableStream: R
         writer.write(binStrToBytes(data));
     }
     writer.close();
+    console.log(`Download completed in ${(Date.now() - start) / 1000}s`);
 };

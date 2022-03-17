@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {Col, Form, Input, message, Modal, Row, Switch, Tooltip} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone, InfoCircleOutlined} from '@ant-design/icons';
 import {UploadFile} from 'antd/es/upload/interface';
-import {addFilesToDataset} from '../web/dataverse';
+import {addFilesToDvDataset} from '../web/dataverse';
 import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
 import {encryptWithPasswordToStream} from '../services/password';
@@ -122,7 +122,7 @@ const upload = async (
     password: string,
     splitKeys: boolean): Promise<void> => {
     const start = Date.now();
-    const saltsBase64: string[] = []; // To send to api
+    const saltsB64: string[] = []; // To send to api
     const encryptedStreams: TransformStream[] = []; // To send to dataverse
     const allKeyShareFiles: File[] = []; // To download
 
@@ -130,15 +130,15 @@ const upload = async (
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const encryptedStream = encryptedStreams[i];
-        const keyShareBase64Strs: string[] = []; // To write split keys into
-        const saltBase64 = encryptWithPasswordToStream(
-            file, password, encryptedStream.writable, splitKeys ? keyShareBase64Strs : undefined);
-        saltsBase64.push(saltBase64);
+        const keyShareB64Arr: string[] = []; // To write split keys into
+        const saltB64 = encryptWithPasswordToStream(
+            file, password, encryptedStream.writable, splitKeys ? keyShareB64Arr : undefined);
+        saltsB64.push(saltB64);
         encryptedStreams.push(encryptedStream);
 
         // Convert split keys into appropriately named files
         if (!splitKeys) continue;
-        allKeyShareFiles.push(...genKeyShareFiles(keyShareBase64Strs, file.name));
+        allKeyShareFiles.push(...genKeyShareFiles(keyShareB64Arr, file.name));
     }
 
     const toHashStreams: ReadableStream[] = [];
@@ -150,7 +150,7 @@ const upload = async (
     }
 
     const [datasetFiles, plaintextHashes, encryptedHashes] = await Promise.all([
-        addFilesToDataset(dvParams, toHashStreams, files.map((f) => f.name)),
+        addFilesToDvDataset(dvParams, toHashStreams, files.map((f) => f.name)),
         hashFilesWithWorkers(files),
         hashStreamsWithWorkers(toStoreStreams),
     ]);
@@ -160,7 +160,7 @@ const upload = async (
             id: datasetFile.dataFile.id,
             plaintextHash: plaintextHashes[idx],
             encryptedHash: encryptedHashes[idx],
-            salt: saltsBase64[idx],
+            salt: saltsB64[idx],
         };
     });
     await saveFilesToDG(dgFiles);

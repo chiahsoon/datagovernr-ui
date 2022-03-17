@@ -1,11 +1,11 @@
 import {DatasetFile} from '../types/datasetFile';
 import {DataverseParams} from '../types/dataverseParams';
 import {Dataset} from '../types/dataset';
-import {checkFilesExistence} from './api';
+import {checkFilesExistenceOnDG} from './api';
 import {createStream, streamToArr} from '../utils/stream';
 import {zipStreams} from '../utils/zip';
 
-export const getLatestDatasetInfo = async (dvParams: DataverseParams): Promise<Dataset> => {
+export const getDvDatasetInfo = async (dvParams: DataverseParams): Promise<Dataset> => {
     const {siteUrl, datasetId} = dvParams;
     const url = `${siteUrl}/api/datasets/${datasetId}/versions/:latest`;
     const resp = await fetch(url, {
@@ -15,7 +15,7 @@ export const getLatestDatasetInfo = async (dvParams: DataverseParams): Promise<D
     const dataset: Dataset = jsonData.data;
 
     // Fill in extra attributes
-    const exists = await checkFilesExistence(dataset.files.map((f) => f.dataFile.id));
+    const exists = await checkFilesExistenceOnDG(dataset.files.map((f) => f.dataFile.id));
     dataset.files.forEach((f, idx) => {
         f.dataFile.inDG = exists[idx];
         f.key = f.dataFile.id;
@@ -31,15 +31,17 @@ export const getLatestDatasetInfo = async (dvParams: DataverseParams): Promise<D
     return dataset;
 };
 
-export const addFilesToDataset = async (
+export const addFilesToDvDataset = async (
     dvParams: DataverseParams,
     streams: ReadableStream[],
     filenames: string[]): Promise<DatasetFile[]> => {
     const zipStream = createStream();
-    await zipStreams(streams, filenames, zipStream.writable);
+    zipStreams(streams, filenames, zipStream.writable);
+    // TODO: Is there no way to avoid blobbing this? (High memory usage)
     const zippedBlobParts: BlobPart[] = await streamToArr(zipStream.readable);
+    const zipFile = new File(zippedBlobParts, 'data.zip');
     const formData = new FormData();
-    formData.append('file', new File(zippedBlobParts, 'data.zip'));
+    formData.append('file', zipFile);
     const url = `${dvParams.siteUrl}/api/datasets/${dvParams.datasetId}/add`;
     const respData = await fetch(url, {
         method: 'POST',
@@ -51,7 +53,7 @@ export const addFilesToDataset = async (
     return empty.concat(jsonData.data.files);
 };
 
-export const downloadFile = async (dvParams: DataverseParams, fileId: number): Promise<Blob> => {
+export const downloadDvFile = async (dvParams: DataverseParams, fileId: number): Promise<Blob> => {
     const start = Date.now();
     let url = `${dvParams.siteUrl}/api/access/datafile/${fileId}?format=original`;
     if (dvParams.apiToken != null) url += `&key=${dvParams.apiToken}`;

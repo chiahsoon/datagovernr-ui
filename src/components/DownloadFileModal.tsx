@@ -3,11 +3,11 @@ import {Col, Form, Input, message, Modal, Row, Tabs, Typography} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone} from '@ant-design/icons';
 import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
-import {decryptWithPasswordToStream, decryptWithSharesToStream} from '../services/password';
+import {passwordDecryptToStream, sharesDecryptToStream} from '../services/password';
 import {downloadViaStreamSaver} from '../utils/download';
 import {UploadFormItem} from './UploadFormItem';
 import {UploadFile} from 'antd/lib/upload/interface';
-import {downloadFile} from '../web/dataverse';
+import {downloadDvFile} from '../web/dataverse';
 import {createStream} from '../utils/stream';
 
 const {TabPane} = Tabs;
@@ -116,11 +116,11 @@ const passwordDecryptDownload = async (
     dvParams: DataverseParams,
     fileId: number,
     fileName: string,
-    saltBase64: string,
+    saltB64: string,
     password: string): Promise<void> => {
-    const ciphertextBinaryBlob = await downloadFile(dvParams, fileId);
+    const ciphertextBinBlob = await downloadDvFile(dvParams, fileId);
     const decryptedStream = createStream();
-    decryptWithPasswordToStream(ciphertextBinaryBlob, password, saltBase64, decryptedStream.writable);
+    passwordDecryptToStream(ciphertextBinBlob, password, saltB64, decryptedStream.writable);
     downloadViaStreamSaver(fileName, decryptedStream.readable);
 };
 
@@ -135,8 +135,8 @@ const keyShareFilesDecryptDownload = async (
     });
     const keyShareStrings = await Promise.all(fileToStringPromises);
 
-    const ciphertextBinaryBlob = await downloadFile(dvParams, fileId);
+    const ciphertextBinBlob = await downloadDvFile(dvParams, fileId);
     const decryptedStream = createStream();
-    decryptWithSharesToStream(ciphertextBinaryBlob, keyShareStrings, decryptedStream.writable);
+    sharesDecryptToStream(ciphertextBinBlob, keyShareStrings, decryptedStream.writable);
     await downloadViaStreamSaver(fileName, decryptedStream.readable.pipeThrough(new TextDecoderStream()));
 };

@@ -1,5 +1,4 @@
 import streamSaver from 'streamsaver';
-import {binStrToBytes} from './file';
 
 // Different download methods
 export const downloadViaATag = (fileName: string, data: Blob) => {
@@ -21,7 +20,7 @@ export const downloadViaStreamSaver = async (fileName: string, readableStream: R
     const writer = fileStream.getWriter();
     for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
         const data: string = chunk.value;
-        writer.write(binStrToBytes(data));
+        writer.write(data);
     }
     writer.close();
     console.log(`Download completed in ${(Date.now() - start) / 1000}s`);

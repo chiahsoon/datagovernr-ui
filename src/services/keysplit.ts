@@ -4,47 +4,47 @@ import forge from 'node-forge';
  *   k^x_0, x_0^x_1, ... x_n
  * for independent random x_i
  */
-export const splitKey = (keyBinary: string, numShares: number =2): string[] => {
+export const splitKey = (keyBinStr: string, numShares: number =2): string[] => {
     /*
-    const otpBinary = forge.random.getBytesSync(keyBinary.length);
-    let cipherBinary = '';
-    for (let i = 0; i < keyBinary.length; i++) {
-        cipherBinary += String.fromCharCode(keyBinary.charCodeAt(i) ^ otpBinary.charCodeAt(i));
+    const otpBinStr = forge.random.getBytesSync(keyBinStr.length);
+    let cipherBinStr = '';
+    for (let i = 0; i < keyBinStr.length; i++) {
+        cipherBinStr += String.fromCharCode(keyBinStr.charCodeAt(i) ^ otpBinStr.charCodeAt(i));
     }
-    return [otpBinary, cipherBinary];
+    return [otpBinStr, cipherBinStr];
     */
     if (!Number.isInteger(numShares) || numShares < 2) {
         throw new RangeError('Invalid parameter.');
     }
-    let tempBinary = keyBinary.slice();
-    let randBinary = '';
+    let tempBinStr = keyBinStr.slice();
+    let randBinStr = '';
     const shareArray = [];
     for (let j = 1; j < numShares; j++) {
-        randBinary = forge.random.getBytesSync(keyBinary.length);
-        let cipherBinary = '';
-        for (let i = 0; i < tempBinary.length; i++) {
-            cipherBinary += String.fromCharCode(tempBinary.charCodeAt(i) ^ randBinary.charCodeAt(i));
+        randBinStr = forge.random.getBytesSync(keyBinStr.length);
+        let cipherBinStr = '';
+        for (let i = 0; i < tempBinStr.length; i++) {
+            cipherBinStr += String.fromCharCode(tempBinStr.charCodeAt(i) ^ randBinStr.charCodeAt(i));
         }
-        shareArray.push(cipherBinary);
-        tempBinary = randBinary.slice();
+        shareArray.push(cipherBinStr);
+        tempBinStr = randBinStr.slice();
     }
-    shareArray.push(randBinary);
+    shareArray.push(randBinStr);
     return shareArray;
 };
 
-export const rebuildKey = (shareBinaryArr: string[]): string => {
-    if (shareBinaryArr.length < 2) {
+export const rebuildKey = (shareBinStrArr: string[]): string => {
+    if (shareBinStrArr.length < 2) {
         throw new RangeError('Not enough shares.');
     }
-    let keyBinary = shareBinaryArr[0].slice();
-    let tempBinary = '';
-    for (let j = 1; j < shareBinaryArr.length; j++) {
-        const shareBinary = shareBinaryArr[j];
-        for (let i = 0; i < shareBinary.length; i++) {
-            tempBinary += String.fromCharCode(keyBinary.charCodeAt(i) ^ shareBinary.charCodeAt(i));
+    let keyBinStr = shareBinStrArr[0].slice();
+    let tempBinStr = '';
+    for (let j = 1; j < shareBinStrArr.length; j++) {
+        const shareBinStr = shareBinStrArr[j];
+        for (let i = 0; i < shareBinStr.length; i++) {
+            tempBinStr += String.fromCharCode(keyBinStr.charCodeAt(i) ^ shareBinStr.charCodeAt(i));
         }
-        keyBinary = tempBinary.slice();
-        tempBinary = '';
+        keyBinStr = tempBinStr.slice();
+        tempBinStr = '';
     }
-    return keyBinary;
+    return keyBinStr;
 };

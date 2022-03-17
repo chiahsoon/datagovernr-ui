@@ -1,5 +1,5 @@
-/* eslint-disable max-len */
 import forge from 'node-forge';
+import {binStrToU8} from '../../utils/file';
 import {CHUNK_SIZE, createStream, blobToStream} from '../../utils/stream';
 import {FileEncryptionInstance} from '../encryption';
 
@@ -30,72 +30,72 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         }
     }
 
-    encryptFile(dataBinaryBuf: ArrayBuffer): string {
+    encryptFile(binBuf: ArrayBuffer): string {
         // Generate a new unique nonce
-        const ivBinary = this.generateNewNonce();
+        const ivBinStr = this.generateNewNonce();
         // Instantiate the new cipher
         const cipher = forge.cipher.createCipher('AES-GCM', this.key);
         cipher.start({
-            iv: ivBinary,
+            iv: ivBinStr,
             additionalData: '',
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
         });
         // Encrypt the plaintext
-        for (let idx = 0; idx < dataBinaryBuf.byteLength; idx += CHUNK_SIZE) {
-            const slice = dataBinaryBuf.slice(idx, idx + CHUNK_SIZE);
+        for (let idx = 0; idx < binBuf.byteLength; idx += CHUNK_SIZE) {
+            const slice = binBuf.slice(idx, idx + CHUNK_SIZE);
             cipher.update(forge.util.createBuffer(slice));
         }
         cipher.finish();
         const cipherTextBsb = cipher.output;
         const tagBsb = cipher.mode.tag;
         // Convert to bytes and concat
-        const cipherTextBinary = cipherTextBsb.getBytes();
-        const tagBinary = tagBsb.getBytes();
-        return ivBinary + cipherTextBinary + tagBinary;
+        const cipherTextBinStr = cipherTextBsb.getBytes();
+        const tagBinStr = tagBsb.getBytes();
+        return ivBinStr + cipherTextBinStr + tagBinStr;
     }
 
-    async encryptFileToStream(file: File, out: WritableStream<Uint8Array>) {
+    async encryptFileToStream(blob: Blob, out: WritableStream<Uint8Array>) {
         const start = Date.now();
-        const writer = out.getWriter();
-        const ivBinary = this.generateNewNonce();
-        writer.write(new TextEncoder().encode(ivBinary));
+        const outWriter = out.getWriter();
+        const ivBinStr = this.generateNewNonce();
+        outWriter.write(new TextEncoder().encode(ivBinStr));
 
         // Instantiate the new cipher
         const cipher = forge.cipher.createCipher('AES-GCM', this.key);
         cipher.start({
-            iv: ivBinary,
+            iv: ivBinStr,
             additionalData: '',
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
         });
         // Encrypt the plaintext
-        for (let idx = 0; idx < file.size; idx += CHUNK_SIZE) {
-            const chunk = await file.slice(idx, idx + CHUNK_SIZE).arrayBuffer();
+        for (let idx = 0; idx < blob.size; idx += CHUNK_SIZE) {
+            const chunk = await blob.slice(idx, idx + CHUNK_SIZE).arrayBuffer();
             cipher.update(forge.util.createBuffer(chunk));
             const encryptedChunk = cipher.output.getBytes();
-            writer.write(new TextEncoder().encode(encryptedChunk));
+            outWriter.write(new TextEncoder().encode(encryptedChunk));
         }
         cipher.finish();
 
         // Convert to bytes and concat
-        const tagBinary = cipher.mode.tag.getBytes();
-        writer.write(new TextEncoder().encode(tagBinary));
-        writer.close();
+        const tagBinStr = cipher.mode.tag.getBytes();
+        outWriter.write(new TextEncoder().encode(tagBinStr));
+        outWriter.close();
         console.log(`Encryption completed in ${(Date.now() - start) / 1000}s`);
     }
 
-    decryptFile(dataBinaryBuf: ArrayBuffer): string {
-        const dataBinary = new TextDecoder().decode(dataBinaryBuf);
+    decryptFile(binBuf: ArrayBuffer): string {
+        const dataBinStr = new TextDecoder().decode(binBuf);
         // Extract IV from file
-        const ivBinary = dataBinary.slice(0, AES256GCMInstance.IV_LENGTH);
-        const cipherTextBinary = dataBinary.slice(
+        const ivBinStr = dataBinStr.slice(0, AES256GCMInstance.IV_LENGTH);
+        const cipherTextBinStr = dataBinStr.slice(
             AES256GCMInstance.IV_LENGTH,
             -AES256GCMInstance.TAG_LENGTH,
         );
         // Extract auth tag from file
-        const tagBinary = dataBinary.slice(-AES256GCMInstance.TAG_LENGTH);
+        const tagBinStr = dataBinStr.slice(-AES256GCMInstance.TAG_LENGTH);
 
-        const ivBsb = forge.util.createBuffer(ivBinary);
-        const tagBsb = forge.util.createBuffer(tagBinary);
+        const ivBsb = forge.util.createBuffer(ivBinStr);
+        const tagBsb = forge.util.createBuffer(tagBinStr);
 
         // Instantiate the cipher
         const decipher = forge.cipher.createDecipher('AES-GCM', this.key);
@@ -105,8 +105,8 @@ export class AES256GCMInstance implements FileEncryptionInstance {
             tagLength: AES256GCMInstance.TAG_LENGTH * 8,
             tag: tagBsb});
         let decryptedStr = '';
-        for (let idx = 0; idx < cipherTextBinary.length; idx += CHUNK_SIZE) {
-            const slice = cipherTextBinary.slice(idx, idx + CHUNK_SIZE);
+        for (let idx = 0; idx < cipherTextBinStr.length; idx += CHUNK_SIZE) {
+            const slice = cipherTextBinStr.slice(idx, idx + CHUNK_SIZE);
             decipher.update(forge.util.createBuffer(slice));
         }
         if (!decipher.finish()) {
@@ -119,29 +119,30 @@ export class AES256GCMInstance implements FileEncryptionInstance {
     async decryptFileToStream(blob: Blob, out: WritableStream) {
         const start = Date.now();
         const writer = out.getWriter();
-        let [ivBinary, tagBinary] = ['', ''];
+        let [ivBinStr, tagBinStr] = ['', ''];
         let [ivIdx, tagIdx] = [0, blob.size - 1];
 
         while (ivIdx < blob.size) {
-            const ivBinaryBuf = await blob.slice(0, ivIdx + 1).arrayBuffer();
-            if (new TextDecoder().decode(ivBinaryBuf).length > AES256GCMInstance.IV_LENGTH) break;
-            ivBinary = new TextDecoder().decode(ivBinaryBuf);
+            const ivBinStrBuf = await blob.slice(0, ivIdx + 1).arrayBuffer();
+            if (new TextDecoder().decode(ivBinStrBuf).length > AES256GCMInstance.IV_LENGTH) break;
+            ivBinStr = new TextDecoder().decode(ivBinStrBuf);
             ivIdx += 1;
         }
 
         while (tagIdx >= 0) {
-            const tagBinaryBuf = await blob.slice(tagIdx, blob.size).arrayBuffer();
-            if (new TextDecoder().decode(tagBinaryBuf).length > AES256GCMInstance.TAG_LENGTH) break;
-            tagBinary = new TextDecoder().decode(tagBinaryBuf);
+            const tagBinStrBuf = await blob.slice(tagIdx, blob.size).arrayBuffer();
+            if (new TextDecoder().decode(tagBinStrBuf).length > AES256GCMInstance.TAG_LENGTH) break;
+            tagBinStr = new TextDecoder().decode(tagBinStrBuf);
             tagIdx -= 1;
         }
 
         // ivIdx = first data byte, tagIdx = last data byte (exclusive, so +1)
-        const ivBsb = forge.util.createBuffer(ivBinary);
-        const tagBsb = forge.util.createBuffer(tagBinary);
+        const ivBsb = forge.util.createBuffer(ivBinStr);
+        const tagBsb = forge.util.createBuffer(tagBinStr);
         const ciphertextBlob = blob.slice(ivIdx, tagIdx+1);
 
         // Decode buffer bytes to UTF-8
+        // If directly slice and decode, some files have issue
         const decodedStream = createStream();
         blobToStream(ciphertextBlob, decodedStream.writable); // Do not await
         const decodedReader = decodedStream.readable.pipeThrough(new TextDecoderStream()).getReader();
@@ -157,11 +158,11 @@ export class AES256GCMInstance implements FileEncryptionInstance {
         for (let chunk = await decodedReader.read(); !chunk.done; chunk = await decodedReader.read()) {
             decipher.update(forge.util.createBuffer(chunk.value));
             const decryptedChunk = decipher.output.getBytes();
-            writer.write(decryptedChunk);
+            writer.write(binStrToU8(decryptedChunk));
         }
 
         if (!decipher.finish()) throw new Error('Decryption Error');
-        writer.write(decipher.output.getBytes());
+        writer.write(binStrToU8(decipher.output.getBytes()));
         writer.close();
         console.log(`Decryption completed in ${(Date.now() - start) / 1000}s`);
     }

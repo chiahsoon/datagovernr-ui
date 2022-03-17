@@ -3,7 +3,7 @@ import {Button, Col, Descriptions, Dropdown, List, Menu, message, Row, Tooltip, 
 import {ErrorPage} from './ErrorPage';
 import {EmptyVerificationDetails, getConcatenatedHashes, isNotSentForVerification,
     VerificationDetails} from '../types/verificationDetails';
-import {getFileVerificationDetails} from '../web/api';
+import {getDGFileVerificationDetails} from '../web/api';
 import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
@@ -29,7 +29,7 @@ enum FileActions {
 export const FilePage = () => {
     useEffect(() => {
         if (areDvParamsIncomplete(dvParams) || fileId == null) return;
-        getFileVerificationDetails(fileId)
+        getDGFileVerificationDetails(fileId)
             .then((details) => setVerificationDetails(details))
             .catch((err) => displayError('Failed to retrieve verification details', err));
     }, []);

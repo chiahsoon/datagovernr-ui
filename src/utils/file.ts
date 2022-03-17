@@ -8,7 +8,7 @@ export const getUploadedFilesData = (fileList: UploadFile[]): RcFile[] => {
         .filter((file): file is RcFile => file !== undefined); // Type Guard
 };
 
-export const binStrToBytes = (binaryString: string): Uint8Array => {
+export const binStrToU8 = (binaryString: string): Uint8Array => {
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < bytes.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);

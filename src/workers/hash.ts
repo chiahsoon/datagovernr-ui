@@ -12,8 +12,8 @@ self.onmessage = (e: MessageEvent<any[]>) => {
         }
     } if (body[0] === 'CHUNK') {
         const itemIdx: number = body[1];
-        const data: string = body[2];
-        state[itemIdx].update(data);
+        const data: ArrayBuffer = body[2];
+        state[itemIdx].update(new TextDecoder().decode(data));
     } else if (body[0] === 'END') {
         const hashes: string[] = [];
         for (let i = 0; i < state.length; i++) {

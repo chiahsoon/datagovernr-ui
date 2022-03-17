@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Col, Row, Button, Tag, Tooltip} from 'antd';
 import Title from 'antd/es/typography/Title';
-import {getLatestDatasetInfo} from '../web/dataverse';
+import {getDvDatasetInfo} from '../web/dataverse';
 import {FilesTable} from '../components/FilesTable';
 import {PlusOutlined} from '@ant-design/icons';
 import {UploadFileModal} from '../components/UploadFileModal';
@@ -30,7 +30,7 @@ export const DatasetPage = () => {
     const [isUploadFilesModalVisible, setIsUploadFilesModalVisible] = useState(false);
 
     const fetchAndUpdateDataset = () => {
-        getLatestDatasetInfo(dvParams)
+        getDvDatasetInfo(dvParams)
             .then((dataset) => setDataset(dataset))
             .catch((err) => displayError('Failed to fetch valid dataset information!', err));
     };

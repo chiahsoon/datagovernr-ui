@@ -86,8 +86,8 @@ const genKeySharesToDownload = async (
     const keyShares = genKeySharesFromPassword(password, salt);
     const data: [string, string, string][] = keyShares.map((ks, idx) => {
         const keyFileName = filenameToKeyShareName(fileName, idx);
-        const ksBase64 = forge.util.encode64(ks);
-        return [keyFileName, 'text/plain', ksBase64];
+        const keyShareB64 = forge.util.encode64(ks);
+        return [keyFileName, 'text/plain', keyShareB64];
     });
     const files = stringsToFiles(data);
     const keysFilename = 'keys.zip';

@@ -93,7 +93,10 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
                         <Form.Item
                             name='password'
                             label='Password'
-                            rules={[{required: true, message: 'Please enter your password.'}]}>
+                            rules={[
+                                {required: true, message: 'Please enter your password.'},
+                                {min: 8, message: 'Password must be at least 8 characters'},
+                            ]}>
                             <Input.Password
                                 required
                                 placeholder='Password'

@@ -1,19 +1,19 @@
 import React from 'react';
 import {EyeTwoTone, EyeInvisibleOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {Form, Input, message, Modal, Tooltip} from 'antd';
-import {genKeySharesFromPassword} from '../services/keygen';
-import {DataverseSourceParams} from '../types/dataverseSourceParams';
+import {genKeySharesFromPassword} from '../services/password';
 import {displayError} from '../utils/error';
-import {downloadViaATag, stringsToFiles, zipFiles} from '../utils/fileHelper';
+import {stringsToFiles} from '../utils/file';
 import forge from 'node-forge';
 import {filenameToKeyShareName} from '../utils/common';
+import {downloadViaATag} from '../utils/download';
+import {zipFiles} from '../utils/zip';
 
 interface RegenKeySharesFormValues {
     password: string,
 }
 
 interface RegenKeySharesModalProps {
-    sourceParams: DataverseSourceParams
     fileName: string
     salt: string
     visible: boolean
@@ -86,8 +86,8 @@ const genKeySharesToDownload = async (
     const keyShares = genKeySharesFromPassword(password, salt);
     const data: [string, string, string][] = keyShares.map((ks, idx) => {
         const keyFileName = filenameToKeyShareName(fileName, idx);
-        const ksBase64 = forge.util.encode64(ks);
-        return [keyFileName, 'text/plain', ksBase64];
+        const keyShareB64 = forge.util.encode64(ks);
+        return [keyFileName, 'text/plain', keyShareB64];
     });
     const files = stringsToFiles(data);
     const keysFilename = 'keys.zip';

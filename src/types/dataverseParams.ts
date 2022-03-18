@@ -1,7 +1,7 @@
 import {useLocation} from 'react-router-dom';
 import {GlobalLocationState} from './globalLocationState';
 
-export interface DataverseSourceParams {
+export interface DataverseParams {
     siteUrl: string,
     apiToken: string,
     datasetVersion: string, // Not in use, just for storage
@@ -9,17 +9,17 @@ export interface DataverseSourceParams {
     datasetPid: string,
 }
 
-export const getSourceParams = (): DataverseSourceParams => {
+export const getDvParams = (): DataverseParams => {
     const fromLocation = useLocation().state as GlobalLocationState;
     if (fromLocation != null &&
-        fromLocation.sourceParams != null &&
-        !areSourceDatasetParamsIncomplete(fromLocation.sourceParams)) {
-        return fromLocation.sourceParams;
+        fromLocation.dvParams != null &&
+        !areDvParamsIncomplete(fromLocation.dvParams)) {
+        return fromLocation.dvParams;
     }
 
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
-    const params: DataverseSourceParams = {
+    const params: DataverseParams = {
         siteUrl: urlParams.get('siteUrl') || '',
         apiToken: urlParams.get('apiToken') || '',
         datasetVersion: urlParams.get('datasetVersion') || '',
@@ -39,11 +39,11 @@ export const getSourceParams = (): DataverseSourceParams => {
     return params;
 };
 
-export const areSourceCoreParamsIncomplete = (sourceParams: DataverseSourceParams): boolean => {
-    return !sourceParams.siteUrl || !sourceParams.apiToken;
+export const areDvCoreParamsIncomplete = (dvParams: DataverseParams): boolean => {
+    return !dvParams.siteUrl || !dvParams.apiToken;
 };
 
-export const areSourceDatasetParamsIncomplete = (sourceParams: DataverseSourceParams): boolean => {
-    return areSourceCoreParamsIncomplete(sourceParams) || !sourceParams.datasetVersion ||
-        !sourceParams.datasetId || !sourceParams.datasetPid;
+export const areDvParamsIncomplete = (dvParams: DataverseParams): boolean => {
+    return areDvCoreParamsIncomplete(dvParams) || !dvParams.datasetVersion ||
+        !dvParams.datasetId || !dvParams.datasetPid;
 };

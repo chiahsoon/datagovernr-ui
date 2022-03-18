@@ -3,13 +3,13 @@ import {Button, Col, Descriptions, Dropdown, List, Menu, message, Row, Tooltip, 
 import {ErrorPage} from './ErrorPage';
 import {EmptyVerificationDetails, getConcatenatedHashes, isNotSentForVerification,
     VerificationDetails} from '../types/verificationDetails';
-import {getFileVerificationDetails} from '../web/api';
+import {getDGFileVerificationDetails} from '../web/api';
 import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
 import {CopyOutlined, DownloadOutlined,
     DownOutlined, QuestionCircleOutlined, ShareAltOutlined} from '@ant-design/icons';
-import {areSourceDatasetParamsIncomplete, getSourceParams} from '../types/dataverseSourceParams';
+import {areDvParamsIncomplete, getDvParams} from '../types/dataverseParams';
 import {FileVerificationListItem} from '../components/FileVerificationListItem';
 import {pageColumnProps} from '../styles/common';
 import {useLocation} from 'react-router-dom';
@@ -28,20 +28,20 @@ enum FileActions {
 
 export const FilePage = () => {
     useEffect(() => {
-        if (areSourceDatasetParamsIncomplete(sourceParams) || fileId == null) return;
-        getFileVerificationDetails(fileId)
+        if (areDvParamsIncomplete(dvParams) || fileId == null) return;
+        getDGFileVerificationDetails(fileId)
             .then((details) => setVerificationDetails(details))
             .catch((err) => displayError('Failed to retrieve verification details', err));
     }, []);
 
     const {fileId, fileName} = useLocation().state as GlobalLocationState;
-    const sourceParams = getSourceParams();
+    const dvParams = getDvParams();
     const [verificationDetails, setVerificationDetails] = useState(EmptyVerificationDetails);
     const [isDownloadFileModalVisible, setIsDownloadFileModalVisible] = useState(false);
     const [isRegenKeySharesModalVisible, setIsRegenKeySharesModalVisible] = useState(false);
     const [hashVerifierVisible, setHashVerifierVisible] = useState(false);
 
-    if (areSourceDatasetParamsIncomplete(sourceParams) || fileId == null) {
+    if (areDvParamsIncomplete(dvParams) || fileId == null) {
         return <ErrorPage
             title='Invalid parameters'
             message='Please navigate to this page from a valid file.' />;
@@ -154,14 +154,13 @@ export const FilePage = () => {
                 </Col>
             </Row>
             <DownloadFileModal
-                sourceParams={sourceParams}
+                dvParams={dvParams}
                 fileId={fileId}
                 fileName={fileName || ''}
                 salt={getSalt()}
                 visible={isDownloadFileModalVisible}
                 setVisible={setIsDownloadFileModalVisible}/>
             <RegenKeySharesModal
-                sourceParams={sourceParams}
                 fileName={fileName || ''}
                 salt={getSalt()}
                 visible={isRegenKeySharesModalVisible}

@@ -1,8 +1,8 @@
-import {DataverseSourceParams} from './dataverseSourceParams';
+import {DataverseParams} from './dataverseParams';
 
 // TODO: Really need to store this better
 export interface GlobalLocationState {
     fileName?: string,
     fileId?: number,
-    sourceParams?: DataverseSourceParams
+    dvParams?: DataverseParams
 }

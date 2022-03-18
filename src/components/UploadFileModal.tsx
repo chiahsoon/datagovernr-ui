@@ -2,19 +2,22 @@ import React, {useState} from 'react';
 import {Col, Form, Input, message, Modal, Row, Switch, Tooltip} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone, InfoCircleOutlined} from '@ant-design/icons';
 import {UploadFile} from 'antd/es/upload/interface';
-import {addFilesToDataset} from '../web/dataverse';
-import {DataverseSourceParams} from '../types/dataverseSourceParams';
+import {addFilesToDvDataset} from '../web/dataverse';
+import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
-import forge from 'node-forge';
+import {encryptWithPasswordToStream} from '../services/password';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
-import {downloadViaATag, getUploadedFilesData, stringsToFiles, zipFiles} from '../utils/fileHelper';
-import {encryptWithPassword} from '../services/keygen';
+import {getUploadedFilesData, stringsToFiles} from '../utils/file';
 import {UploadFormItem} from './UploadFormItem';
 import {filenameToKeyShareName} from '../utils/common';
+import {zipFiles} from '../utils/zip';
+import {downloadViaATag} from '../utils/download';
+import {hashFilesWithWorkers, hashStreamsWithWorkers} from '../utils/worker';
+import {createStream} from '../utils/stream';
 
 interface UploadFileModalProps {
-    sourceParams: DataverseSourceParams
+    dvParams: DataverseParams
     visible: boolean
     setVisible: (isVisible: boolean) => void
     callbackFn: () => void
@@ -28,15 +31,15 @@ interface UploadFormValues {
 
 export const UploadFileModal = (props: UploadFileModalProps) => {
     const [form] = Form.useForm();
-    const {sourceParams, visible, setVisible, callbackFn} = props;
+    const {dvParams, visible, setVisible, callbackFn} = props;
     const [isUploading, setIsUploading] = useState(false);
     const [uploadErrorMsg, setUploadErrorMsg] = useState('');
 
     const onModalOk = () => {
         setIsUploading(true);
         form.validateFields()
-            .then((v: UploadFormValues) => saveFiles(sourceParams, getUploadedFilesData(v.fileList),
-                v.password, v.genSplitKeys))
+            .then(async (v: UploadFormValues) => upload(dvParams,
+                getUploadedFilesData(v.fileList), v.password, v.genSplitKeys))
             .then(() => message.success('Successfully uploaded all files.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))
@@ -113,58 +116,61 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     );
 };
 
-const saveFiles = async (sourceParams: DataverseSourceParams, files: File[],
-    password: string, splitKeys: boolean): Promise<void> => {
-    const plaintextStrs: string[] = []; // To hash
-    const encryptedStrs: string[] = []; // To hash
-    const saltsBase64: string[] = []; // To send to api
-    const encryptedFiles: File[] = []; // To send to dataverse
+const upload = async (
+    dvParams: DataverseParams,
+    files: File[],
+    password: string,
+    splitKeys: boolean): Promise<void> => {
+    const saltsB64: string[] = []; // encode64 send to api
+    const encryptedToHashStreams: ReadableStream[] = []; // Hash & encode64 send to api
+    const encryptedToStoreStreams: ReadableStream[] = []; // Send to dataverse
     const allKeyShareFiles: File[] = []; // To download
 
-    for (const file of files) {
-        const keyShareBase64Strs: string[] = []; // To write split keys into
-        const fileBuf = await file.arrayBuffer();
-        const [encryptedBinaryStr, saltBase64] = encryptWithPassword(fileBuf, password,
-            splitKeys? keyShareBase64Strs: undefined);
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const encryptedStream = createStream();
+
+        const keyShareB64Arr: string[] = []; // To write split keys into
+        const saltB64 = encryptWithPasswordToStream(
+            file, password, encryptedStream.writable, splitKeys ? keyShareB64Arr : undefined);
+        saltsB64.push(saltB64);
+
+        const [encryptedToHashStream, encryptedToStoreStream] = encryptedStream.readable.tee();
+        encryptedToHashStreams.push(encryptedToHashStream);
+        encryptedToStoreStreams.push(encryptedToStoreStream);
 
         // Convert split keys into appropriately named files
-        if (splitKeys && keyShareBase64Strs.length > 0) {
-            const data: [string, string, string][] = keyShareBase64Strs.map((ks, idx) => {
-                const keyFileName = filenameToKeyShareName(file.name, idx);
-                return [keyFileName, 'text/plain', ks];
-            });
-            const keyShareFiles = stringsToFiles(data);
-            allKeyShareFiles.push(...keyShareFiles);
-        }
-
-        const encryptedFile = stringsToFiles([[file.name, file.type, encryptedBinaryStr]])[0];
-        saltsBase64.push(saltBase64);
-        plaintextStrs.push(new TextDecoder().decode(fileBuf));
-        encryptedStrs.push(encryptedBinaryStr);
-        encryptedFiles.push(encryptedFile);
+        if (!splitKeys) continue;
+        allKeyShareFiles.push(...genKeyShareFiles(keyShareB64Arr, file.name));
     }
 
-    // Add to Dataverse
-    const datasetFiles = await addFilesToDataset(sourceParams, encryptedFiles);
+    const [datasetFiles, plaintextHashes, encryptedHashes] = await Promise.all([
+        addFilesToDvDataset(dvParams, encryptedToStoreStreams, files.map((f) => f.name)),
+        hashFilesWithWorkers(files),
+        hashStreamsWithWorkers(encryptedToHashStreams),
+    ]);
 
-    // Hash and save base64 form (avoid database encoding issues) to DG
-    const hashFn = (value: string) => forge.util.encode64(forge.md.sha512.create().update(value).digest().getBytes());
-    const encryptedFileHashes = encryptedStrs.map((encryptedStr) => hashFn(encryptedStr));
-    const plaintextHashes = plaintextStrs.map((plaintextStr) => hashFn(plaintextStr));
     const dgFiles: DGFile[] = datasetFiles.map((datasetFile, idx) => {
         return {
             id: datasetFile.dataFile.id,
             plaintextHash: plaintextHashes[idx],
-            encryptedHash: encryptedFileHashes[idx],
-            salt: saltsBase64[idx],
+            encryptedHash: encryptedHashes[idx],
+            salt: saltsB64[idx],
         };
     });
     await saveFilesToDG(dgFiles);
 
-    if (!splitKeys) return;
-
     // Let user download split keys as a zip
+    if (!splitKeys) return;
     const keysFilename = 'keys.zip';
     const zipFile = await zipFiles(allKeyShareFiles, keysFilename);
     downloadViaATag(keysFilename, zipFile);
+};
+
+const genKeyShareFiles = (keyShares: string[], filename: string): File[] => {
+    const data: [string, string, string][] = keyShares.map((ks, idx) => {
+        const keyFileName = filenameToKeyShareName(filename, idx);
+        return [keyFileName, 'text/plain', ks];
+    });
+    return stringsToFiles(data);
 };

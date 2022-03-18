@@ -1,19 +1,20 @@
 import React, {useState} from 'react';
 import {Col, Form, Input, message, Modal, Row, Tabs, Typography} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone} from '@ant-design/icons';
-import {downloadFile} from '../web/dataverse';
-import {DataverseSourceParams} from '../types/dataverseSourceParams';
+import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
-import {decryptWithPassword, decryptWithShares} from '../services/keygen';
-import {byteStringToBytes as binaryToByteArray, downloadViaATag} from '../utils/fileHelper';
+import {passwordDecryptToStream, sharesDecryptToStream} from '../services/password';
+import {downloadViaStreamSaver} from '../utils/download';
 import {UploadFormItem} from './UploadFormItem';
 import {UploadFile} from 'antd/lib/upload/interface';
+import {downloadDvFile} from '../web/dataverse';
+import {createStream} from '../utils/stream';
 
 const {TabPane} = Tabs;
 const {Text} = Typography;
 
 interface DownloadFileModalProps {
-    sourceParams: DataverseSourceParams
+    dvParams: DataverseParams
     fileId: number
     fileName: string
     salt: string
@@ -33,7 +34,7 @@ enum DecryptionType {
 
 export const DownloadFileModal = (props: DownloadFileModalProps) => {
     const [form] = Form.useForm();
-    const {sourceParams, fileId, fileName, salt, visible, setVisible} = props;
+    const {dvParams, fileId, fileName, salt, visible, setVisible} = props;
     const [isDownloading, setIsDownloading] = useState(false);
     const [decryptionType, setDecryptionType] = useState(DecryptionType.Password);
     const [uploadErrorMsg, setUploadErrorMsg] = useState('');
@@ -42,8 +43,8 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
         setIsDownloading(true);
         form.validateFields()
             .then((v: DownloadFormValues) => decryptionType === DecryptionType.Password ?
-                passwordDecryptDownload(sourceParams, fileId, fileName, salt, v.password) :
-                keyShareFilesDecryptDownload(sourceParams, fileId, fileName, v.keyShareFiles))
+                passwordDecryptDownload(dvParams, fileId, fileName, salt, v.password) :
+                keyShareFilesDecryptDownload(dvParams, fileId, fileName, v.keyShareFiles))
             .then(() => message.success('Successfully downloaded file.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))
@@ -98,6 +99,7 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
                                 <Text strong>Upload your key share text files</Text>
                                 <br/><br/>
                                 <UploadFormItem
+                                    validateErrors={decryptionType === DecryptionType.KeyShareFiles}
                                     formKey={DecryptionType.KeyShareFiles}
                                     errorMsg={uploadErrorMsg}
                                     setErrorMsg={setUploadErrorMsg}/>
@@ -111,33 +113,30 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
 };
 
 const passwordDecryptDownload = async (
-    sourceParams: DataverseSourceParams,
+    dvParams: DataverseParams,
     fileId: number,
     fileName: string,
-    saltBase64: string,
+    saltB64: string,
     password: string): Promise<void> => {
-    const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
-    const plaintextBinary = decryptWithPassword(ciphertextBinaryBuf, password, saltBase64);
-    promptDownload(plaintextBinary, fileName);
+    const ciphertextBinBlob = await downloadDvFile(dvParams, fileId);
+    const decryptedStream = createStream();
+    passwordDecryptToStream(ciphertextBinBlob, password, saltB64, decryptedStream.writable);
+    downloadViaStreamSaver(fileName, decryptedStream.readable);
 };
 
 const keyShareFilesDecryptDownload = async (
-    sourceParams: DataverseSourceParams,
+    dvParams: DataverseParams,
     fileId: number,
     fileName: string,
     keyShareFiles: UploadFile[]): Promise<void> => {
-    const ciphertextBinaryBuf = await downloadFile(sourceParams, fileId);
     const fileToStringPromises: Promise<string>[] = [];
     keyShareFiles.forEach((f) => {
         if (f.originFileObj != null ) fileToStringPromises.push(f.originFileObj.text());
     });
     const keyShareStrings = await Promise.all(fileToStringPromises);
-    const plaintextBinary = decryptWithShares(ciphertextBinaryBuf, keyShareStrings);
-    promptDownload(plaintextBinary, fileName);
-};
 
-const promptDownload = (plaintextBinary: string, fileName: string) => {
-    const bytes = binaryToByteArray(plaintextBinary);
-    const blob = new Blob([bytes]);
-    downloadViaATag(fileName, blob);
+    const ciphertextBinBlob = await downloadDvFile(dvParams, fileId);
+    const decryptedStream = createStream();
+    sharesDecryptToStream(ciphertextBinBlob, keyShareStrings, decryptedStream.writable);
+    await downloadViaStreamSaver(fileName, decryptedStream.readable.pipeThrough(new TextDecoderStream()));
 };

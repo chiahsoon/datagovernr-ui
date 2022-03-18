@@ -3,17 +3,17 @@ import {Button, Table, Tooltip} from 'antd';
 import {ColumnsType} from 'antd/es/table';
 import {DatasetFile} from '../types/datasetFile';
 import {Link} from 'react-router-dom';
-import {DataverseSourceParams} from '../types/dataverseSourceParams';
+import {DataverseParams} from '../types/dataverseParams';
 import {GlobalLocationState} from '../types/globalLocationState';
 import {SafetyCertificateOutlined} from '@ant-design/icons';
 
 interface FilesTableProps {
-    sourceParams: DataverseSourceParams
+    dvParams: DataverseParams
     files: DatasetFile[]
 }
 
 export const FilesTable = (props: FilesTableProps) => {
-    const {files, sourceParams} = props;
+    const {files, dvParams} = props;
     const columns: ColumnsType<DatasetFile> = [
         {
             title: 'File Name',
@@ -44,7 +44,7 @@ export const FilesTable = (props: FilesTableProps) => {
                 const state: GlobalLocationState = {
                     fileId: record.dataFile.id,
                     fileName: record.label,
-                    sourceParams,
+                    dvParams: dvParams,
                 };
                 return (
                     <Button type='link' disabled={!record.dataFile.inDG}>

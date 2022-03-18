@@ -1,15 +1,12 @@
 import React, {useEffect, useState} from 'react';
 import {Col, Row, Button, Tag, Tooltip} from 'antd';
 import Title from 'antd/es/typography/Title';
-import {getLatestDatasetInfo} from '../web/dataverse';
+import {getDvDatasetInfo} from '../web/dataverse';
 import {FilesTable} from '../components/FilesTable';
 import {PlusOutlined} from '@ant-design/icons';
 import {UploadFileModal} from '../components/UploadFileModal';
 import {Skeleton} from 'antd/es';
-import {
-    getSourceParams,
-    areSourceDatasetParamsIncomplete,
-} from '../types/dataverseSourceParams';
+import {getDvParams, areDvParamsIncomplete} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
 import {
     DRAFT_VERSION_STATE,
@@ -24,21 +21,21 @@ import {pageColumnProps} from '../styles/common';
 
 export const DatasetPage = () => {
     useEffect(() => {
-        if (areSourceDatasetParamsIncomplete(sourceParams)) return;
+        if (areDvParamsIncomplete(dvParams)) return;
         fetchAndUpdateDataset();
     }, []);
 
-    const sourceParams = getSourceParams();
+    const dvParams = getDvParams();
     const [dataset, setDataset] = useState(EmptyDataset);
     const [isUploadFilesModalVisible, setIsUploadFilesModalVisible] = useState(false);
 
     const fetchAndUpdateDataset = () => {
-        getLatestDatasetInfo(sourceParams)
+        getDvDatasetInfo(dvParams)
             .then((dataset) => setDataset(dataset))
             .catch((err) => displayError('Failed to fetch valid dataset information!', err));
     };
 
-    if (areSourceDatasetParamsIncomplete(sourceParams)) {
+    if (areDvParamsIncomplete(dvParams)) {
         return <ErrorPage
             title='Invalid entry method'
             message='Please access DataGovernR via a dataset in your Dataverse Dashboard.' />;
@@ -74,11 +71,11 @@ export const DatasetPage = () => {
                     </Button>
                 </Col>
                 <Col {...pageColumnProps}>
-                    <FilesTable files={dataset.files} sourceParams={sourceParams}/>
+                    <FilesTable files={dataset.files} dvParams={dvParams}/>
                 </Col>
             </Row>
             <UploadFileModal
-                sourceParams={sourceParams}
+                dvParams={dvParams}
                 visible={isUploadFilesModalVisible}
                 setVisible={setIsUploadFilesModalVisible}
                 callbackFn={() => fetchAndUpdateDataset()}

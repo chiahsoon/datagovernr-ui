@@ -2,7 +2,7 @@ import {DGFile, VerificationDetails} from '../types/verificationDetails';
 
 const apiUrl = process.env.REACT_APP_API_URL;
 
-export const getFileVerificationDetails = async (fileId: number): Promise<VerificationDetails> => {
+export const getDGFileVerificationDetails = async (fileId: number): Promise<VerificationDetails> => {
     const url = `${apiUrl}/file/verifier?fileId=${fileId}`;
     const resp = await fetch(url);
     const jsonData = await resp.json();
@@ -11,7 +11,7 @@ export const getFileVerificationDetails = async (fileId: number): Promise<Verifi
     return data;
 };
 
-export const checkFilesExistence = async (fileIds: number[]): Promise<boolean[]> => {
+export const checkFilesExistenceOnDG = async (fileIds: number[]): Promise<boolean[]> => {
     const url = `${apiUrl}/file/exists`;
     const resp = await fetch(url, {
         method: 'POST',

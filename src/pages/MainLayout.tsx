@@ -1,7 +1,7 @@
 import React from 'react';
 import {Layout, Menu} from 'antd';
 import {Link} from 'react-router-dom';
-import {getSourceParams} from '../types/dataverseSourceParams';
+import {getDvParams} from '../types/dataverseParams';
 const {Header, Content} = Layout;
 
 interface MainLayoutProps {
@@ -12,12 +12,12 @@ interface MainLayoutProps {
 
 // props.children is a special prop that gets rendered in between the tags
 const MainLayout = (props: MainLayoutProps) => {
-    const sourceParams = getSourceParams();
+    const dvParams = getDvParams();
     const {name, children} = props;
     return (
         <Layout style={{minHeight: '100vh', background: 'white'}} >
             <Header>
-                <Link to='/' state={{sourceParams}} style={{color: 'white'}}>{name}</Link>
+                <Link to='/' state={{dvParams}} style={{color: 'white'}}>{name}</Link>
                 <Menu theme='dark' mode='horizontal' />
             </Header>
             <Content>

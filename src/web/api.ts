@@ -23,10 +23,12 @@ export const checkFilesExistenceOnDG = async (fileIds: number[]): Promise<boolea
 };
 
 export const saveFilesToDG = async (dgFiles: DGFile[]): Promise<void> => {
+    const start = Date.now();
     const url = `${apiUrl}/file`;
     await fetch(url, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({files: dgFiles}),
     });
+    console.log(`Saving files to DG completed in: ${(Date.now() - start) / 1000}s`);
 };

@@ -16,11 +16,19 @@ export const binStrToU8 = (binaryString: string): Uint8Array => {
     return bytes;
 };
 
+export const u8ToBinStr = (u8: Uint8Array): string => {
+    let binStr = '';
+    for (let i = 0; i < u8.length; i++) {
+        binStr += String.fromCharCode(u8[i]);
+    }
+    return binStr;
+};
+
 export const stringsToFiles = (data: [string, string, string][]): File[] => {
     const files: File[] = [];
     for (let idx = 0; idx < data.length; idx++) {
         const [fileName, fileType, dataStr] = data[idx];
-        const buf = new TextEncoder().encode(dataStr);
+        const buf = binStrToU8(dataStr);
         const blob = new Blob([buf]);
         const file = new File([blob], fileName, {
             type: fileType, // Mime-type

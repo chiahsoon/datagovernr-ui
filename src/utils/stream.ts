@@ -11,21 +11,11 @@ export const createStream = (): TransformStream => {
     });
 };
 
-export const streamToArr = async (stream: ReadableStream): Promise<any[]> => {
+export const streamToArr = async (stream: ReadableStream<Uint8Array>): Promise<any[]> => {
     const res = [];
     const reader = stream.getReader();
     for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
         res.push(chunk.value);
     }
     return res;
-};
-
-export const blobToStream = async (blob: Blob, out: WritableStream) => {
-    // DO NOT await this!
-    const tempWriter = out.getWriter();
-    for (let idx = 0; idx < blob.size; idx += CHUNK_SIZE) {
-        const chunk = await blob.slice(idx, idx + CHUNK_SIZE).arrayBuffer();
-        tempWriter.write(chunk);
-    }
-    tempWriter.close();
 };

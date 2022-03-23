@@ -138,5 +138,5 @@ const keyShareFilesDecryptDownload = async (
     const ciphertextBinBlob = await downloadDvFile(dvParams, fileId);
     const decryptedStream = createStream();
     sharesDecryptToStream(ciphertextBinBlob, keyShareStrings, decryptedStream.writable);
-    await downloadViaStreamSaver(fileName, decryptedStream.readable.pipeThrough(new TextDecoderStream()));
+    await downloadViaStreamSaver(fileName, decryptedStream.readable);
 };

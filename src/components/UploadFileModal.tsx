@@ -125,8 +125,8 @@ const upload = async (
     password: string,
     splitKeys: boolean): Promise<void> => {
     const saltsB64: string[] = []; // encode64 send to api
-    const encryptedToHashStreams: ReadableStream[] = []; // Hash & encode64 send to api
-    const encryptedToStoreStreams: ReadableStream[] = []; // Send to dataverse
+    const encryptedToHashStreams: ReadableStream<Uint8Array>[] = []; // Hash & encode64 send to api
+    const encryptedToStoreStreams: ReadableStream<Uint8Array>[] = []; // Send to dataverse
     const allKeyShareFiles: File[] = []; // To download
 
     for (let i = 0; i < files.length; i++) {

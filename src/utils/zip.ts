@@ -12,7 +12,7 @@ export const zipFiles = async (files: File[], zipFileName: string): Promise<File
     return zipFile;
 };
 
-export const zipStreams = async (streams: ReadableStream[], filenames: string[], out: WritableStream) => {
+export const zipStreams = async (streams: ReadableStream<Uint8Array>[], filenames: string[], out: WritableStream) => {
     const start = Date.now();
     const resultWriter = out.getWriter();
     const zip = new Zip((err, dat, final) => {
@@ -31,7 +31,7 @@ export const zipStreams = async (streams: ReadableStream[], filenames: string[],
         while (true) {
             const nextChunk = await reader.read();
             const isFinal = nextChunk.done;
-            zipFile.push(chunk.value, isFinal);
+            if (chunk.value != null) zipFile.push(chunk.value, isFinal);
             if (isFinal) break;
             chunk = nextChunk;
         };

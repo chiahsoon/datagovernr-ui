@@ -33,7 +33,7 @@ export const getDvDatasetInfo = async (dvParams: DataverseParams): Promise<Datas
 
 export const addFilesToDvDataset = async (
     dvParams: DataverseParams,
-    streams: ReadableStream[],
+    streams: ReadableStream<Uint8Array>[],
     filenames: string[]): Promise<DatasetFile[]> => {
     const zipStream = createStream();
     zipStreams(streams, filenames, zipStream.writable);

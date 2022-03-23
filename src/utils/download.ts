@@ -12,14 +12,14 @@ export const downloadViaATag = (fileName: string, data: Blob) => {
     document.body.removeChild(element);
 };
 
-export const downloadViaStreamSaver = async (fileName: string, readableStream: ReadableStream) => {
+export const downloadViaStreamSaver = async (fileName: string, readableStream: ReadableStream<Uint8Array>) => {
     // Stream should already a decoded string
     const start = Date.now();
     const reader = readableStream.getReader();
     const fileStream = streamSaver.createWriteStream(fileName);
     const writer = fileStream.getWriter();
     for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-        const data: string = chunk.value;
+        const data: Uint8Array = chunk.value;
         writer.write(data);
     }
     writer.close();

@@ -6,7 +6,7 @@ import {rebuildKey, splitKey} from './keysplit';
 export const encryptWithPasswordToStream = (
     file: File,
     password: string,
-    out: WritableStream,
+    out: WritableStream<Uint8Array>,
     keyShares?: string[]): string => {
     const saltBinStr = random.getBytesSync(SALT_LENGTH);
     const saltB64 = util.encode64(saltBinStr);
@@ -37,7 +37,7 @@ export const passwordDecryptToStream = (
     blob: Blob,
     password: string,
     saltB64: string,
-    out: WritableStream) => {
+    out: WritableStream<Uint8Array>) => {
     // saltB64 is a string that stores the salt in base64 format
     const saltBinStr = util.decode64(saltB64);
     const keyBinStr = generateKey(password, saltBinStr,
@@ -51,7 +51,7 @@ export const passwordDecryptToStream = (
 export const sharesDecryptToStream = async (
     blob: Blob,
     shareB64Arr: string[],
-    out: WritableStream) => {
+    out: WritableStream<Uint8Array>) => {
     // the shares of the key are stored as base64 strings
     const shareBinStrArr = [];
     for (let i=0; i<shareB64Arr.length; i++) {

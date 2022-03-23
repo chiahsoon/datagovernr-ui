@@ -1,3 +1,4 @@
+import {u8ToBinStr} from './file';
 import {CHUNK_SIZE} from './stream';
 
 export const hashFilesWithWorkers = (files: File[]): Promise<string[]> => {
@@ -14,15 +15,16 @@ export const hashFilesWithWorkers = (files: File[]): Promise<string[]> => {
         for (let bufIdx = 0; bufIdx < files.length; bufIdx++) {
             const file = files[bufIdx];
             for (let byteIdx = 0; byteIdx < file.size; byteIdx += CHUNK_SIZE) {
-                const chunk = await file.slice(byteIdx, byteIdx + CHUNK_SIZE).arrayBuffer();
-                worker.postMessage(['CHUNK', bufIdx, chunk]);
+                const chunkBuf = await file.slice(byteIdx, byteIdx + CHUNK_SIZE).arrayBuffer();
+                const chunkU8 = new Uint8Array(chunkBuf);
+                worker.postMessage(['CHUNK', bufIdx, u8ToBinStr(chunkU8)]);
             }
         }
         worker.postMessage(['END']);
     });
 };
 
-export const hashStreamsWithWorkers = (streams: ReadableStream[]): Promise<string[]> => {
+export const hashStreamsWithWorkers = (streams: ReadableStream<Uint8Array>[]): Promise<string[]> => {
     const start = Date.now();
     const worker = new Worker(new URL('../workers/hash.ts', import.meta.url));
     return new Promise(async (resolve) => {
@@ -36,7 +38,8 @@ export const hashStreamsWithWorkers = (streams: ReadableStream[]): Promise<strin
         for (let idx = 0; idx < streams.length; idx++) {
             const reader = streams[idx].getReader();
             for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-                worker.postMessage(['CHUNK', idx, chunk.value]);
+                const chunkU8 = chunk.value;
+                worker.postMessage(['CHUNK', idx, u8ToBinStr(chunkU8)]);
             };
         }
         worker.postMessage(['END']);

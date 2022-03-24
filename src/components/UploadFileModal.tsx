@@ -36,10 +36,12 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     const [uploadErrorMsg, setUploadErrorMsg] = useState('');
 
     const onModalOk = () => {
+        const start = Date.now();
         setIsUploading(true);
         form.validateFields()
             .then(async (v: UploadFormValues) => upload(dvParams,
                 getUploadedFilesData(v.fileList), v.password, v.genSplitKeys))
+            .then(() => console.log(`Upload process completed in ${(Date.now() - start) / 1000}s`))
             .then(() => message.success('Successfully uploaded all files.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))

@@ -40,11 +40,13 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
     const [uploadErrorMsg, setUploadErrorMsg] = useState('');
 
     const onModalOk = () => {
+        const start = Date.now();
         setIsDownloading(true);
         form.validateFields()
             .then((v: DownloadFormValues) => decryptionType === DecryptionType.Password ?
                 passwordDecryptDownload(dvParams, fileId, fileName, salt, v.password) :
                 keyShareFilesDecryptDownload(dvParams, fileId, fileName, v.keyShareFiles))
+            .then(() => console.log(`Download process completed in ${(Date.now() - start) / 1000}s`))
             .then(() => message.success('Successfully downloaded file.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))
@@ -121,7 +123,7 @@ const passwordDecryptDownload = async (
     const ciphertextBinBlob = await downloadDvFile(dvParams, fileId);
     const decryptedStream = createStream();
     passwordDecryptToStream(ciphertextBinBlob, password, saltB64, decryptedStream.writable);
-    downloadViaStreamSaver(fileName, decryptedStream.readable);
+    await downloadViaStreamSaver(fileName, decryptedStream.readable);
 };
 
 const keyShareFilesDecryptDownload = async (

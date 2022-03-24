@@ -50,7 +50,7 @@ export const addFilesToDvDataset = async (
         headers: {'X-Dataverse-key': dvParams.apiToken},
     });
     const jsonData = await respData.json();
-    console.log(`Upload completed in ${(Date.now() - start) / 1000}s`);
+    console.log(`Saving files to Dataverse completed in ${(Date.now() - start) / 1000}s`);
     const empty: DatasetFile[] = [];
     return empty.concat(jsonData.data.files);
 };
@@ -61,6 +61,6 @@ export const downloadDvFile = async (dvParams: DataverseParams, fileId: number):
     if (dvParams.apiToken != null) url += `&key=${dvParams.apiToken}`;
     const resp = await fetch(url);
     const blob = await resp.blob();
-    console.log(`File download completed in: ${(Date.now() - start) / 1000}s`);
+    console.log(`Download file from Dataverse completed in: ${(Date.now() - start) / 1000}s`);
     return blob;
 };

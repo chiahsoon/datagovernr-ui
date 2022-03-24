@@ -30,5 +30,5 @@ export const saveFilesToDG = async (dgFiles: DGFile[]): Promise<void> => {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({files: dgFiles}),
     });
-    console.log(`Saving files to DG completed in: ${(Date.now() - start) / 1000}s`);
+    console.log(`Saving to DataGovernR completed in: ${(Date.now() - start) / 1000}s`);
 };

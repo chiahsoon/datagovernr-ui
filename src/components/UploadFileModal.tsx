@@ -5,7 +5,7 @@ import {UploadFile} from 'antd/es/upload/interface';
 import {addStreamsToDvDataset} from '../web/dataverse';
 import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
-import {encryptWithPasswordToStream} from '../services/password';
+import {encryptWithPasswordToStream, genKeyWithSalts} from '../services/password';
 import {DGFile} from '../types/verificationDetails';
 import {saveFilesToDG} from '../web/api';
 import {getUploadedFilesData, stringsToFiles} from '../utils/file';
@@ -15,6 +15,8 @@ import {zipFiles} from '../utils/zip';
 import {downloadViaATag} from '../utils/download';
 import {hashFilesWithWorkers, hashStreamsWithWorkers} from '../utils/worker';
 import {createStream} from '../utils/stream';
+import {splitKey} from '../services/keysplit';
+import {util} from 'node-forge';
 
 interface UploadFileModalProps {
     dvParams: DataverseParams
@@ -36,12 +38,10 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
     const [uploadErrorMsg, setUploadErrorMsg] = useState('');
 
     const onModalOk = () => {
-        const start = Date.now();
         setIsUploading(true);
         form.validateFields()
             .then(async (v: UploadFormValues) => upload(dvParams,
                 getUploadedFilesData(v.fileList), v.password, v.genSplitKeys))
-            .then(() => console.log(`Upload process completed in ${(Date.now() - start) / 1000}s`))
             .then(() => message.success('Successfully uploaded all files.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))
@@ -125,27 +125,25 @@ const upload = async (
     dvParams: DataverseParams,
     files: File[],
     password: string,
-    splitKeys: boolean): Promise<void> => {
-    const saltsB64: string[] = []; // encode64 send to api
+    toGenSplitKeys: boolean): Promise<void> => {
+    const allKeyShareFiles: File[] = []; // To download
     const encryptedToHashStreams: ReadableStream<Uint8Array>[] = []; // Hash & encode64 send to api
     const encryptedToStoreStreams: ReadableStream<Uint8Array>[] = []; // Send to dataverse
-    const allKeyShareFiles: File[] = []; // To download
 
+    const [keyBinStrArr, saltsB64s] = await genKeyWithSalts(password, files.length);
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        const keyBinStr = keyBinStrArr[i];
         const encryptedStream = createStream();
-
-        const keyShareB64Arr: string[] = []; // To write split keys into
-        const saltB64 = encryptWithPasswordToStream(
-            file, password, encryptedStream.writable, splitKeys ? keyShareB64Arr : undefined);
-        saltsB64.push(saltB64);
+        encryptWithPasswordToStream(file, keyBinStr, encryptedStream.writable);
 
         const [encryptedToHashStream, encryptedToStoreStream] = encryptedStream.readable.tee();
         encryptedToHashStreams.push(encryptedToHashStream);
         encryptedToStoreStreams.push(encryptedToStoreStream);
 
         // Convert split keys into appropriately named files
-        if (!splitKeys) continue;
+        if (!toGenSplitKeys) continue;
+        const keyShareB64Arr = splitKey(keyBinStr).map(util.encode64);
         allKeyShareFiles.push(...genKeyShareFiles(keyShareB64Arr, file.name));
     }
 
@@ -160,13 +158,13 @@ const upload = async (
             id: datasetFile.dataFile.id,
             plaintextHash: plaintextHashes[idx],
             encryptedHash: encryptedHashes[idx],
-            salt: saltsB64[idx],
+            salt: saltsB64s[idx],
         };
     });
     await saveFilesToDG(dgFiles);
 
     // Let user download split keys as a zip
-    if (!splitKeys) return;
+    if (!toGenSplitKeys) return;
     const keysFilename = 'keys.zip';
     const zipFile = await zipFiles(allKeyShareFiles, keysFilename);
     downloadViaATag(keysFilename, zipFile);

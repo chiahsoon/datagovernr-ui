@@ -45,3 +45,17 @@ export const hashStreamsWithWorkers = (streams: ReadableStream<Uint8Array>[]): P
         worker.postMessage(['END']);
     });
 };
+
+export const generateKeysWithWorkers = (passwordSaltKeyLenArr: [string, string, number][]): Promise<string[]> => {
+    const start = Date.now();
+    const worker = new Worker(new URL('../workers/pbkdf2.ts', import.meta.url));
+    return new Promise(async (resolve) => {
+        worker.onmessage = (e) => {
+            console.log(`Key Generation completed in ${(Date.now() - start) / 1000}s`);
+            const keyBinStrs: string[] = e.data;
+            resolve(keyBinStrs);
+            worker.terminate();
+        };
+        worker.postMessage(passwordSaltKeyLenArr);
+    });
+};

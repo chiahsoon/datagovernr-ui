@@ -1,7 +1,7 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {EyeTwoTone, EyeInvisibleOutlined, QuestionCircleOutlined} from '@ant-design/icons';
 import {Form, Input, message, Modal, Tooltip} from 'antd';
-import {genKeySharesFromPassword} from '../services/password';
+import {regenKeyShares} from '../services/password';
 import {displayError} from '../utils/error';
 import {stringsToFiles} from '../utils/file';
 import forge from 'node-forge';
@@ -23,14 +23,17 @@ interface RegenKeySharesModalProps {
 export const RegenKeySharesModal = (props: RegenKeySharesModalProps) => {
     const [form] = Form.useForm();
     const {fileName, salt, visible, setVisible} = props;
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const onModalOk = () => {
+        setIsGenerating(true);
         form.validateFields()
             .then((v: RegenKeySharesFormValues) => genKeySharesToDownload(v.password, salt, fileName))
             .then(() => message.success('Successfully generated key share files.'))
             .then(() => form.resetFields())
             .then(() => setVisible(false))
-            .catch((err: Error) => displayError('Failed to generate key share files: ' + err.message, err));
+            .catch((err: Error) => displayError('Failed to generate key share files: ' + err.message, err))
+            .finally(() => setIsGenerating(false));
     };
 
     const onModalCancel = () => {
@@ -51,7 +54,8 @@ export const RegenKeySharesModal = (props: RegenKeySharesModalProps) => {
                     </Tooltip>
                 </span>
             }
-            okText='Generate'
+            okText={isGenerating ? 'Generating  ...' : 'Generate'}
+            okButtonProps={{loading: isGenerating}}
             visible={visible}
             onOk={onModalOk}
             onCancel={onModalCancel}>
@@ -83,7 +87,7 @@ const genKeySharesToDownload = async (
     password: string,
     salt: string,
     fileName: string) => {
-    const keyShares = genKeySharesFromPassword(password, salt);
+    const keyShares = await regenKeyShares(password, salt);
     const data: [string, string, string][] = keyShares.map((ks, idx) => {
         const keyFileName = filenameToKeyShareName(fileName, idx);
         const keyShareB64 = forge.util.encode64(ks);

@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {Col, Form, Input, message, Modal, Row, Switch, Tooltip} from 'antd';
 import {EyeInvisibleOutlined, EyeTwoTone, InfoCircleOutlined} from '@ant-design/icons';
 import {UploadFile} from 'antd/es/upload/interface';
-import {addFilesToDvDataset} from '../web/dataverse';
+import {addStreamsToDvDataset} from '../web/dataverse';
 import {DataverseParams} from '../types/dataverseParams';
 import {displayError} from '../utils/error';
 import {encryptWithPasswordToStream} from '../services/password';
@@ -150,7 +150,7 @@ const upload = async (
     }
 
     const [datasetFiles, plaintextHashes, encryptedHashes] = await Promise.all([
-        addFilesToDvDataset(dvParams, encryptedToStoreStreams, files.map((f) => f.name)),
+        addStreamsToDvDataset(dvParams, encryptedToStoreStreams, files.map((f) => f.name)),
         hashFilesWithWorkers(files),
         hashStreamsWithWorkers(encryptedToHashStreams),
     ]);

@@ -31,7 +31,7 @@ export const getDvDatasetInfo = async (dvParams: DataverseParams): Promise<Datas
     return dataset;
 };
 
-export const addFilesToDvDataset = async (
+export const addStreamsToDvDataset = async (
     dvParams: DataverseParams,
     streams: ReadableStream<Uint8Array>[],
     filenames: string[]): Promise<DatasetFile[]> => {
@@ -40,19 +40,52 @@ export const addFilesToDvDataset = async (
     // TODO: Is there no way to avoid blobbing this? (High memory usage)
     const zippedBlobParts: BlobPart[] = await streamToArr(zipStream.readable);
     const zipFile = new File(zippedBlobParts, 'data.zip');
-    const formData = new FormData();
-    formData.append('file', zipFile);
-    const url = `${dvParams.siteUrl}/api/datasets/${dvParams.datasetId}/add`;
     const start = Date.now();
+    const newFiles = await addFilesToDv(dvParams, zipFile);
+    console.log(`Saving files to Dataverse completed in ${(Date.now() - start) / 1000}s`);
+    return newFiles;
+};
+
+export const addFilesToDvDataset = async (
+    dvParams: DataverseParams,
+    streams: ReadableStream<Uint8Array>[],
+    filenames: string[]): Promise<DatasetFile[]> => {
+    const start = Date.now();
+    const allNewFiles: DatasetFile[] = [];
+    for (let i = 0; i < streams.length; i ++) {
+        const blobParts: BlobPart[] = await streamToArr(streams[i]);
+        const file = new File(blobParts, filenames[i]);
+        const newFiles = await addFilesToDv(dvParams, file);
+        newFiles.push(...newFiles);
+
+        if (i === streams.length - 1) break;
+        while (await isDvDatasetLocked(dvParams)) null; // await delay(100);
+    }
+
+    console.log(`Saving files to Dataverse completed in ${(Date.now() - start) / 1000}s`);
+    return allNewFiles;
+};
+
+const addFilesToDv = async (dvParams: DataverseParams, file: File): Promise<DatasetFile[]> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const url = `${dvParams.siteUrl}/api/datasets/${dvParams.datasetId}/add`;
     const respData = await fetch(url, {
         method: 'POST',
         body: formData,
         headers: {'X-Dataverse-key': dvParams.apiToken},
     });
     const jsonData = await respData.json();
-    console.log(`Saving files to Dataverse completed in ${(Date.now() - start) / 1000}s`);
     const empty: DatasetFile[] = [];
     return empty.concat(jsonData.data.files);
+};
+
+const isDvDatasetLocked = async (dvParams: DataverseParams): Promise<boolean> => {
+    const checkLockUrl = `${dvParams.siteUrl}/api/datasets/${dvParams.datasetId}/locks`;
+    const checkLockResp = await fetch(checkLockUrl);
+    const checkLockJson = await checkLockResp.json();
+    const locks: any[] = checkLockJson.data;
+    return locks.length > 0;
 };
 
 export const downloadDvFile = async (dvParams: DataverseParams, fileId: number): Promise<Blob> => {

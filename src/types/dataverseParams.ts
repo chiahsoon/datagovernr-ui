@@ -29,7 +29,7 @@ export const getDvParams = (): DataverseParams => {
 
     // For localhost, dataverse returns e.g. http://<OS host name>:8080 instead of http://localhost:8080
     // Using http as indicator to change to localhost since it's unsafe
-    if (params.siteUrl.startsWith('http')) {
+    if (params.siteUrl.startsWith('http://')) {
         const url = new URL(params.siteUrl);
         url.host = 'localhost';
         const urlString = url.toString();

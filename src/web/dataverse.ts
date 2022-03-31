@@ -35,29 +35,40 @@ export const addStreamsToDvDataset = async (
     dvParams: DataverseParams,
     streams: ReadableStream<Uint8Array>[],
     filenames: string[]): Promise<DatasetFile[]> => {
-    const zipStream = createStream();
-    zipStreams(streams, filenames, zipStream.writable);
-    // TODO: Is there no way to avoid blobbing this? (High memory usage)
-    const zippedBlobParts: BlobPart[] = await streamToArr(zipStream.readable);
-    const zipFile = new File(zippedBlobParts, 'data.zip');
+    if (streams.length != filenames.length) throw new Error('Number of streams and filenames do not match!');
+
+    let file: File;
+    if (streams.length == 1) {
+        const blobParts: BlobPart[] = await streamToArr(streams[0]);
+        file = new File(blobParts, filenames[0]);
+    } else {
+        const zipStream = createStream();
+        zipStreams(streams, filenames, zipStream.writable);
+        const zippedBlobParts: BlobPart[] = await streamToArr(zipStream.readable);
+        file = new File(zippedBlobParts, 'data.zip');
+    }
+
     const start = Date.now();
-    const newFiles = await addFilesToDv(dvParams, zipFile);
+    const newFiles = await addFileToDv(dvParams, file);
     console.log(`Saving files to Dataverse completed in ${(Date.now() - start) / 1000}s`);
     return newFiles;
 };
 
-export const addFilesToDvDataset = async (
+// Network delays costly for multiple files
+export const addStreamToDvDatasetPoll = async (
     dvParams: DataverseParams,
     streams: ReadableStream<Uint8Array>[],
     filenames: string[]): Promise<DatasetFile[]> => {
+    const files = await Promise.all(streams.map(async (s, i) => {
+        const blobParts: BlobPart[] = await streamToArr(streams[i]);
+        return new File(blobParts, filenames[i]);
+    }));
+
     const start = Date.now();
     const allNewFiles: DatasetFile[] = [];
-    for (let i = 0; i < streams.length; i ++) {
-        const blobParts: BlobPart[] = await streamToArr(streams[i]);
-        const file = new File(blobParts, filenames[i]);
-        const newFiles = await addFilesToDv(dvParams, file);
-        newFiles.push(...newFiles);
-
+    for (let i = 0; i < files.length; i ++) {
+        const newFiles = await addFileToDv(dvParams, files[i]);
+        allNewFiles.push(...newFiles);
         if (i === streams.length - 1) break;
         while (await isDvDatasetLocked(dvParams)) null; // await delay(100);
     }
@@ -66,7 +77,8 @@ export const addFilesToDvDataset = async (
     return allNewFiles;
 };
 
-const addFilesToDv = async (dvParams: DataverseParams, file: File): Promise<DatasetFile[]> => {
+const addFileToDv = async (dvParams: DataverseParams, file: File): Promise<DatasetFile[]> => {
+    // Since file may be a zipfile containing multiple files, return value might be >= 1 too
     const formData = new FormData();
     formData.append('file', file);
     const url = `${dvParams.siteUrl}/api/datasets/${dvParams.datasetId}/add`;

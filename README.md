@@ -1,46 +1,48 @@
 # DataGovernR UI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Features
+1. Encryption/Decryption via AES-256-GCM.
+    * Password-based key management via [PBKDF2](https://en.wikipedia.org/wiki/PBKDF2).
+    * Key-distribution via [Vernam's Cipher](https://en.wikipedia.org/wiki/Gilbert_Vernam#The_Vernam_cipher).
+2. Proof of Upload Time using blockchain(s) via [OriginStamp](https://originstamp.com/).
 
-## Available Scripts
+## Dependencies 
+* [Dataverse](https://guides.dataverse.org/en/latest/developers/dev-environment.html#id2)
+* [Backend](https://github.com/chiahsoon/datagovernr-api)
 
-In the project directory, you can run:
+## Development
+> We assume use of `Yarn` here
+1. Start a local instance of Dataverse and the backend.
+2. Add DataGovernR as an external tool (only once!) for your local Dataverse instance by executing this at the root of this repository (more info [here](https://guides.dataverse.org/en/latest/admin/external-tools.html#managing-external-tools)):
+    ```bash
+    curl -X POST -H 'Content-type: application/json' http://localhost:8080/api/admin/externalTools --upload-file datagovernr.json
+    ```
+3. Create a `.env.development` file with the following variables:
 
-### `yarn start`
+| Key      | Value |
+| ----------- | ----------- |
+| REACT_APP_API_URL      | [Your API URL]       |
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+4. Install dependencies via `yarn install`.
+5. Start the developmental server using `yarn start`.
+6. To properly access DataGovernR, navigate to a dataset in Dataverse and click on `Access Dataset` to access DataGovernR.
+## Deployment
+* Not attempted yet, may have various issues.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Overview
+### Upload & Encryption
+* User-entered password are combined with random salts to generate different keys for every uploaded file, even if they are in the same upload 'batch'.
+    * If desired, key shares for each file in a 'batch' are generated and downloaded to the uploader's desktop.
+* The plaintext file hash and encrypted file hash is generated for each file and sent to the backend, together with the salt.
+* At a specified interval, cronjobs are used to aggregate these hashes and send them to OriginStamp.
 
-### `yarn test`
+### Download & Decryption
+* Key is regenerated in 2 ways:
+    * Salt is retrieved from the backend and combined with the password to obtain the key
+    * Key shares are combined to obtain the key
+* File decrypted and download to the user's desktop.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `yarn build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `yarn eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Proof of Upload
+* OriginStamp provides HTTP APIs to submit timestamped hashes to the blockchain
+    * NOT a trusted third party - hashes can be verified independently via various block explorers.
+* More details can be found in the backend repository.

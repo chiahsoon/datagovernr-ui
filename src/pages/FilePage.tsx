@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {Button, Col, Descriptions, Dropdown, List, Menu, message, Row, Tooltip, Typography} from 'antd';
+import {Button, Col, Descriptions, Dropdown, List, Menu, Row, Tooltip, Typography} from 'antd';
 import {ErrorPage} from './ErrorPage';
 import {EmptyVerificationDetails, getConcatenatedHashes, isNotSentForVerification,
     VerificationDetails} from '../types/verificationDetails';
@@ -7,49 +7,47 @@ import {getDGFileVerificationDetails} from '../web/api';
 import {displayError} from '../utils/error';
 import MainLayout from './MainLayout';
 import Title from 'antd/es/typography/Title';
-import {CopyOutlined, DownloadOutlined,
-    DownOutlined, QuestionCircleOutlined, ShareAltOutlined} from '@ant-design/icons';
+import {DownloadOutlined, DownOutlined, QuestionCircleOutlined, ShareAltOutlined} from '@ant-design/icons';
 import {areDvParamsIncomplete, getDvParams} from '../types/dataverseParams';
 import {FileVerificationListItem} from '../components/FileVerificationListItem';
 import {pageColumnProps} from '../styles/common';
 import {useLocation} from 'react-router-dom';
 import {GlobalLocationState} from '../types/globalLocationState';
 import {DownloadFileModal} from '../components/DownloadFileModal';
-import {HashVerifierModal} from '../components/HashVerifierModal';
+import {AggregationVerifierModal} from '../components/AggregationVerifierModal';
 import {RegenKeySharesModal} from '../components/RegenKeySharesModal';
+import {LabelWithCopyBtn} from '../components/LabelWithCopyBtn';
 
 const {Text, Link} = Typography;
 
 enum FileActions {
     Download = 'download',
     GenKeyShares = 'genKeyShares',
-    Reencrypt = 'rencrypt',
 }
 
-export const FilePage = () => {
+export const FilePage: React.FC = () => {
     useEffect(() => {
-        if (areDvParamsIncomplete(dvParams) || fileId == null) return;
+        if (fileId == null) return;
         getDGFileVerificationDetails(fileId)
             .then((details) => setVerificationDetails(details))
             .catch((err) => displayError('Failed to retrieve verification details', err));
     }, []);
 
-    const {fileId, fileName} = useLocation().state as GlobalLocationState;
-    const dvParams = getDvParams();
-    const [verificationDetails, setVerificationDetails] = useState(EmptyVerificationDetails);
-    const [isDownloadFileModalVisible, setIsDownloadFileModalVisible] = useState(false);
-    const [isRegenKeySharesModalVisible, setIsRegenKeySharesModalVisible] = useState(false);
-    const [hashVerifierVisible, setHashVerifierVisible] = useState(false);
-
-    if (areDvParamsIncomplete(dvParams) || fileId == null) {
-        return <ErrorPage
-            title='Invalid parameters'
-            message='Please navigate to this page from a valid file.' />;
-    }
-
     const getSalt = (): string => {
         const file = verificationDetails.files.find((f) => f.id === fileId);
         if (file != null) return file.salt;
+        return '';
+    };
+
+    const getPlaintextHash = (): string => {
+        const file = verificationDetails.files.find((f) => f.id === fileId);
+        if (file != null) return file.plaintextHash;
+        return '';
+    };
+
+    const getEncryptedHash = (): string => {
+        const file = verificationDetails.files.find((f) => f.id === fileId);
+        if (file != null) return file.encryptedHash;
         return '';
     };
 
@@ -63,20 +61,26 @@ export const FilePage = () => {
         return link;
     };
 
-    const parseLinkForHashVerifier = async (): Promise<string> => {
-        // TODO: Parse PDF and get verification link
-        return '';
-    };
-
     function handleMenuClick(e: any) {
         const {key} = e;
         if (key === FileActions.Download) {
             setIsDownloadFileModalVisible(true);
         } else if (key === FileActions.GenKeyShares) {
             setIsRegenKeySharesModalVisible(true);
-        } else if (key === FileActions.Reencrypt) {
-            message.info('Feature not available yet!');
         }
+    }
+
+    const {fileId, fileName} = useLocation().state as GlobalLocationState;
+    const dvParams = getDvParams();
+    const [verificationDetails, setVerificationDetails] = useState(EmptyVerificationDetails);
+    const [isDownloadFileModalVisible, setIsDownloadFileModalVisible] = useState(false);
+    const [isRegenKeySharesModalVisible, setIsRegenKeySharesModalVisible] = useState(false);
+    const [hashVerifierVisible, setHashVerifierVisible] = useState(false);
+
+    if (areDvParamsIncomplete(dvParams) || fileId == null) {
+        return <ErrorPage
+            title='Invalid parameters'
+            message='Please navigate to this page from a valid file.' />;
     }
 
     return (
@@ -94,9 +98,6 @@ export const FilePage = () => {
                                 <Menu.Item key={FileActions.GenKeyShares} icon={<ShareAltOutlined />}>
                                     Generate Key Shares
                                 </Menu.Item>
-                                {/* <Menu.Item key={FileActions.Reencrypt} icon={<DeliveredProcedureOutlined />}>
-                                    Re-encrypt
-                                </Menu.Item> */}
                             </Menu>
                         }>
                         <Button style={{float: 'right'}}>Options <DownOutlined /></Button>
@@ -105,6 +106,12 @@ export const FilePage = () => {
                 <Col {...pageColumnProps}>
                     <Descriptions bordered size='small' column={1}>
                         <Descriptions.Item label='File ID'>{fileId}</Descriptions.Item>
+                        <Descriptions.Item label={<LabelWithCopyBtn label='Plaintext Hash' data={getPlaintextHash()}/>}>
+                            {getPlaintextHash()}
+                        </Descriptions.Item>
+                        <Descriptions.Item label={<LabelWithCopyBtn label='Encrypted Hash' data={getEncryptedHash()}/>}>
+                            {getEncryptedHash()}
+                        </Descriptions.Item>
                         <Descriptions.Item label='Proof File'>
                             {
                                 getLink(verificationDetails) == null ?
@@ -121,27 +128,20 @@ export const FilePage = () => {
                         size='large'
                         header={
                             <Title level={5} style={{display: 'inline'}}>
-                                File Hashes Involved
+                                Files involved in upload proof
                                 <Tooltip
-                                    title={'Click on the \'Verify Hash\' button to see how the hashes are aggregated.'}>
+                                    title={`Hashes of multiple files are aggregated for efficiency in proving uploads.
+                                    Click on the \'Verify Aggregation\' button to verify the aggregation process.`}>
                                     <QuestionCircleOutlined style={{marginLeft: '8px'}}/>
                                 </Tooltip>
-                                <Button
-                                    icon={<CopyOutlined style={{cursor: 'pointer'}}/>}
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(getConcatenatedHashes(verificationDetails));
-                                        message.success('Copied file hashes to clipboard!');
-                                    }}
-                                    style={{border: '0px'}}/>
+                                <LabelWithCopyBtn data={getConcatenatedHashes(verificationDetails)}/>
                                 <Button
                                     style={{float: 'right'}}
                                     disabled={isNotSentForVerification(verificationDetails)}
-                                    onClick={() => {
-                                        parseLinkForHashVerifier().then(() => setHashVerifierVisible(true));
-                                    }}>
-                                    Verify Hashes
+                                    onClick={() => setHashVerifierVisible(true)}>
+                                    Verify Aggregation
                                 </Button>
-                                <HashVerifierModal
+                                <AggregationVerifierModal
                                     visible={hashVerifierVisible}
                                     onCancel={() => setHashVerifierVisible(false)}
                                 />
@@ -149,7 +149,9 @@ export const FilePage = () => {
                         }
                         bordered
                         dataSource={verificationDetails.files}
-                        renderItem={(item) => <FileVerificationListItem file={item}/>}
+                        renderItem={(item) => {
+                            return <FileVerificationListItem file={item} isCurrentFile={item.id === fileId}/>;
+                        }}
                     />
                 </Col>
             </Row>

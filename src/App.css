@@ -1,19 +1,19 @@
 @import '~antd/dist/antd.css';
 
 /* Hash Verifier Output Description Styles */
-.hash-verifier-output-desc .ant-descriptions-view {
+.aggregation-verifier-output-desc .ant-descriptions-view {
     overflow: auto;
 }
 
-.hash-verifier-output-desc .ant-descriptions {
+.aggregation-verifier-output-desc .ant-descriptions {
     overflow: auto;
     word-break: normal;
 }
 
-.hash-verifier-output-desc .ant-descriptions-item-content {
+.aggregation-verifier-output-desc .ant-descriptions-item-content {
     word-break: normal;
 }
 
-.hash-verifier-output-desc .ant-descriptions-item-label {
+.aggregation-verifier-output-desc .ant-descriptions-item-label {
     word-break: normal;
 }

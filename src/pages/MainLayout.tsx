@@ -9,16 +9,21 @@ interface MainLayoutProps {
     children: React.ReactNode;
 }
 
-
 // props.children is a special prop that gets rendered in between the tags
-const MainLayout = (props: MainLayoutProps) => {
+const MainLayout: React.FC<MainLayoutProps> = (props) => {
     const dvParams = getDvParams();
     const {name, children} = props;
     return (
         <Layout style={{minHeight: '100vh', background: 'white'}} >
             <Header>
-                <Link to='/' state={{dvParams}} style={{color: 'white'}}>{name}</Link>
-                <Menu theme='dark' mode='horizontal' />
+                <Menu theme='dark' mode='horizontal' >
+                    <Menu.Item key={'home'}>
+                        <Link to='/' state={{dvParams}} style={{color: 'white', fontWeight: 'bold'}}>{name}</Link>
+                    </Menu.Item>
+                    <Menu.Item key={'verify'}>
+                        <Link to='/verify' state={{dvParams}} style={{color: 'white'}}>Verify</Link>
+                    </Menu.Item>
+                </Menu>
             </Header>
             <Content>
                 <div style={{padding: '1em'}}>

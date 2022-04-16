@@ -20,7 +20,7 @@ interface RegenKeySharesModalProps {
     setVisible: (isVisible: boolean) => void
 }
 
-export const RegenKeySharesModal = (props: RegenKeySharesModalProps) => {
+export const RegenKeySharesModal: React.FC<RegenKeySharesModalProps> = (props) => {
     const [form] = Form.useForm();
     const {fileName, salt, visible, setVisible} = props;
     const [isGenerating, setIsGenerating] = useState(false);

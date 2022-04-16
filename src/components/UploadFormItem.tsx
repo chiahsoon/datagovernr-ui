@@ -9,11 +9,12 @@ interface UploadFormItemProps {
     validateErrors?: boolean
     formKey: string
     errorMsg: string
+    multiple?: boolean
     setErrorMsg: (msg: string) => void,
 }
 
 export const UploadFormItem = (props: UploadFormItemProps) => {
-    const {formKey, errorMsg, validateErrors, setErrorMsg} = props;
+    const {formKey, errorMsg, validateErrors, multiple, setErrorMsg} = props;
 
     const handleFileEvent = (e: any): File[] => {
         // Handles both add and removal
@@ -43,7 +44,7 @@ export const UploadFormItem = (props: UploadFormItemProps) => {
                     },
                 ]}>
                 <Dragger
-                    multiple
+                    multiple={multiple || multiple == null}
                     style={{borderColor: errorMsg ? fieldsErrorRedBorder : fieldsGreyBorder}}
                     beforeUpload={() => false}> {/* Stops from uploading immediately) */}
                     <p className='ant-upload-drag-icon'>

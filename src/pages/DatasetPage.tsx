@@ -19,7 +19,7 @@ import MainLayout from './MainLayout';
 import {pageColumnProps} from '../styles/common';
 
 
-export const DatasetPage = () => {
+export const DatasetPage: React.FC = () => {
     useEffect(() => {
         if (areDvParamsIncomplete(dvParams)) return;
         fetchAndUpdateDataset();

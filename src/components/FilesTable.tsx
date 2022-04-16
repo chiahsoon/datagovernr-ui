@@ -12,7 +12,7 @@ interface FilesTableProps {
     files: DatasetFile[]
 }
 
-export const FilesTable = (props: FilesTableProps) => {
+export const FilesTable:React.FC<FilesTableProps> = (props) => {
     const {files, dvParams} = props;
     const columns: ColumnsType<DatasetFile> = [
         {

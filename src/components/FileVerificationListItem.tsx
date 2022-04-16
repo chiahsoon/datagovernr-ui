@@ -2,13 +2,21 @@ import React from 'react';
 import {List} from 'antd';
 import {DGFile} from '../types/verificationDetails';
 
-export const FileVerificationListItem = (props: { file: DGFile }) => {
+export const FileVerificationListItem: React.FC<{ file: DGFile, isCurrentFile: boolean }> = (props) => {
     // TODO: Consider adding names to data
-    const {id, plaintextHash, encryptedHash} = props.file;
+    const {file, isCurrentFile} = props;
+    const {id, plaintextHash, encryptedHash} = file;
     return (
         <List.Item>
             <List.Item.Meta
-                title={`File ID: ${id}`}
+                title={
+                    <>
+                        File ID: {id}
+                        <span style={{color: 'darkgray', fontStyle: 'italic'}}>
+                            {isCurrentFile ? ' (Current File)' : ''}
+                        </span>
+                    </>
+                }
                 description={
                     <>
                     Plaintext Hash: {plaintextHash}

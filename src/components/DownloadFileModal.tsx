@@ -32,7 +32,7 @@ enum DecryptionType {
     KeyShareFiles = 'keyShareFiles',
 }
 
-export const DownloadFileModal = (props: DownloadFileModalProps) => {
+export const DownloadFileModal: React.FC<DownloadFileModalProps> = (props) => {
     const [form] = Form.useForm();
     const {dvParams, fileId, fileName, salt, visible, setVisible} = props;
     const [isDownloading, setIsDownloading] = useState(false);
@@ -59,11 +59,7 @@ export const DownloadFileModal = (props: DownloadFileModalProps) => {
 
     return (
         <Modal
-            title={
-                <span>
-                    Decrypt and download files
-                </span>
-            }
+            title={<span>Decrypt and download files</span>}
             visible={visible}
             onOk={onModalOk}
             onCancel={onModalCancel}

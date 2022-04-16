@@ -31,7 +31,7 @@ interface UploadFormValues {
     fileList: UploadFile[],
 }
 
-export const UploadFileModal = (props: UploadFileModalProps) => {
+export const UploadFileModal: React.FC<UploadFileModalProps> = (props) => {
     const [form] = Form.useForm();
     const {dvParams, visible, setVisible, callbackFn} = props;
     const [isUploading, setIsUploading] = useState(false);
@@ -41,7 +41,7 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
         const start = Date.now();
         setIsUploading(true);
         form.validateFields()
-            .then(async (v: UploadFormValues) => upload(dvParams,
+            .then((v: UploadFormValues) => upload(dvParams,
                 getUploadedFilesData(v.fileList), v.password, v.genSplitKeys))
             .then(() => console.log(`Upload process completed in ${(Date.now() - start) / 1000}`))
             .then(() => message.success('Successfully uploaded all files.'))
@@ -104,8 +104,7 @@ export const UploadFileModal = (props: UploadFileModalProps) => {
                             <Input.Password
                                 required
                                 placeholder='Password'
-                                iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                            />
+                                iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}/>
                         </Form.Item>
                         <Form.Item
                             name='genSplitKeys'
@@ -145,7 +144,7 @@ const upload = async (
 
         // Convert split keys into appropriately named files
         if (!toGenSplitKeys) continue;
-        const keyShareB64Arr = splitKey(keyBinStr).map(util.encode64);
+        const keyShareB64Arr = splitKey(keyBinStr).map((ks) => util.encode64(ks));
         allKeyShareFiles.push(...genKeyShareFiles(keyShareB64Arr, file.name));
     }
 

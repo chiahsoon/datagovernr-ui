@@ -8,7 +8,7 @@ interface ErrorPageProps {
     message: string
 }
 
-export const ErrorPage = (props: ErrorPageProps) => {
+export const ErrorPage: React.FC<ErrorPageProps> = (props) => {
     const {title, message} = props;
     return (
         <Row align={'middle'} style={{textAlign: 'center', minHeight: '80vh'}}>

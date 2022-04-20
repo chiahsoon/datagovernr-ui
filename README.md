@@ -19,9 +19,9 @@
     ```
 3. Create a `.env.development` file with the following variables:
 
-| Key      | Value |
-| ----------- | ----------- |
-| REACT_APP_API_URL      | [Your API URL]       |
+   | Key      | Value |
+   | ----------- | ----------- |
+   | REACT_APP_API_URL      | [Your API URL]       |
 
 4. Install dependencies via `yarn install`.
 5. Start the developmental server using `yarn start`.
